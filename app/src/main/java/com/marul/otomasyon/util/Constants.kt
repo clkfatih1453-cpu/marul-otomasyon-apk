@@ -1,4 +1,4 @@
-﻿package com.marul.otomasyon.util
+package com.marul.otomasyon.util
 
 object Constants {
     // MQTT Broker Varsayılanları
@@ -22,8 +22,8 @@ object Constants {
     const val TOPIC_EC          = "marul/sensor/ec"
     const val TOPIC_TEMP        = "marul/sensor/temp"
     const val TOPIC_HUMIDITY    = "marul/sensor/humidity"
-    const val TOPIC_WATER_TEMP  = "marul/sensor/watertemp"
-    const val TOPIC_TANK        = "marul/sensor/tank"
+    const val TOPIC_WATER_TEMP  = "marul/sensor/water_temp"
+    const val TOPIC_TANK        = "marul/sensor/water_level"
     const val TOPIC_WATER_ADDED = "marul/sensor/water_added"
     const val TOPIC_FLOW_A      = "marul/sensor/flow_a"
     const val TOPIC_FLOW_B      = "marul/sensor/flow_b"

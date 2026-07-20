@@ -1,4 +1,4 @@
-﻿package com.marul.otomasyon.manager
+package com.marul.otomasyon.manager
 
 import com.marul.otomasyon.model.PumpStatus
 import com.marul.otomasyon.model.SensorData

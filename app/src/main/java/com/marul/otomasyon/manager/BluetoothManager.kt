@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager as AndroidBluetoothManager
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
@@ -73,10 +72,16 @@ class BluetoothManager(private val context: Context) {
     fun writeCharacteristic(uuid: String, value: String) {
         val characteristic = bluetoothGatt?.getService(UUID.fromString(Constants.SERVICE_UUID))
             ?.getCharacteristic(UUID.fromString(uuid))
-        
+
         characteristic?.let {
-            it.value = value.toByteArray(Charsets.UTF_8)
-            bluetoothGatt?.writeCharacteristic(it)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bluetoothGatt?.writeCharacteristic(it, value.toByteArray(Charsets.UTF_8), BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
+            } else {
+                @Suppress("DEPRECATION")
+                it.value = value.toByteArray(Charsets.UTF_8)
+                @Suppress("DEPRECATION")
+                bluetoothGatt?.writeCharacteristic(it)
+            }
         }
     }
 
@@ -157,12 +162,27 @@ class BluetoothManager(private val context: Context) {
             characteristic: BluetoothGattCharacteristic?,
             status: Int
         ) {
+            @Suppress("DEPRECATION")
             super.onCharacteristicRead(gatt, characteristic, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                @Suppress("DEPRECATION")
                 characteristic?.value?.let {
                     val data = String(it, Charsets.UTF_8)
                     callback?.onDataReceived(data)
                 }
+            }
+        }
+
+        // API 33+ için yeni callback
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int
+        ) {
+            super.onCharacteristicRead(gatt, characteristic, value, status)
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                callback?.onDataReceived(String(value, Charsets.UTF_8))
             }
         }
 

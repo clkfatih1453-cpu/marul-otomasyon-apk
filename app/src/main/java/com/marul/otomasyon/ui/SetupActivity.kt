@@ -15,10 +15,16 @@ import com.marul.otomasyon.manager.BluetoothCallback
 import com.marul.otomasyon.manager.BluetoothManager
 import com.marul.otomasyon.manager.SettingsManager
 import com.marul.otomasyon.util.Constants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class SetupActivity : Activity(), BluetoothCallback {
     private lateinit var bluetoothManager: BluetoothManager
     private lateinit var settingsManager: SettingsManager
+    private lateinit var activityScope: CoroutineScope
     private lateinit var progressBar: ProgressBar
     private lateinit var deviceListView: ListView
     private lateinit var edtSsid: EditText
@@ -35,6 +41,7 @@ class SetupActivity : Activity(), BluetoothCallback {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_setup)
 
+        activityScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         bluetoothManager = BluetoothManager(this)
         settingsManager = SettingsManager(this)
 
@@ -121,7 +128,7 @@ class SetupActivity : Activity(), BluetoothCallback {
 
     @SuppressLint("MissingPermission")
     private fun sendWifiConfigToDevice(ssid: String, password: String, phMax: Float, phMin: Float, ecMin: Float) {
-        Thread {
+        activityScope.launch {
             try {
                 bluetoothManager.writeCharacteristic(Constants.CHAR_SSID_UUID, ssid)
                 Thread.sleep(100)
@@ -152,7 +159,7 @@ class SetupActivity : Activity(), BluetoothCallback {
                     Toast.makeText(this@SetupActivity, e.message, Toast.LENGTH_SHORT).show()
                 }
             }
-        }.start()
+        }
     }
 
     override fun onDeviceFound(deviceName: String, deviceAddress: String) {
@@ -189,6 +196,7 @@ class SetupActivity : Activity(), BluetoothCallback {
 
     override fun onDestroy() {
         super.onDestroy()
+        activityScope.cancel()
         bluetoothManager.disconnect()
     }
 }

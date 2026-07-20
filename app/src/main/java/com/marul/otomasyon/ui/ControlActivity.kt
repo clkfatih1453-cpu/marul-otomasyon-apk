@@ -33,12 +33,13 @@ class ControlActivity : Activity() {
     private lateinit var switchFertilizerA: Switch
     private lateinit var switchFertilizerB: Switch
     private lateinit var switchCirculation: Switch
-    private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private lateinit var activityScope: CoroutineScope
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_control)
 
+        activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         sensorDataManager = SensorDataManager()
         settingsManager = SettingsManager(this)
         blynkManager = BlynkManager(settingsManager.getBlynkToken())

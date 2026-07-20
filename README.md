@@ -29,7 +29,7 @@ Repoda da hazır kopyalar bulunur:
 
 ## QR Kod ile İndirme
 
-Telefon kullanıcıları için en kolay yöntemlerden biri direkt indirme linkini QR koda çevirmektir:
+Telefon kullanıcıları için en kolay yöntemlerden biri direkt indirme linkini QR koda dönüştürmektir:
 
 1. Yukarıdaki direkt indirme linklerinden birini kopyala.
 2. Herhangi bir QR üreticiye yapıştır.

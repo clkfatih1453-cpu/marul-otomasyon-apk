@@ -1,27 +1,22 @@
 package com.marul.otomasyon.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import com.marul.otomasyon.R
 import com.marul.otomasyon.manager.SettingsManager
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
     private lateinit var settingsManager: SettingsManager
     private lateinit var statusText: TextView
 
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (allGranted) {
-            navigateToSetup()
-        }
+    companion object {
+        private const val REQUEST_PERMISSIONS = 1001
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,12 +73,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         val needsRequest = permissions.any {
-            android.content.pm.PackageManager.PERMISSION_DENIED ==
-            androidx.core.content.ContextCompat.checkSelfPermission(this, it)
+            PackageManager.PERMISSION_DENIED == checkSelfPermission(it)
         }
 
         if (needsRequest) {
-            permissionLauncher.launch(permissions.toTypedArray())
+            requestPermissions(permissions.toTypedArray(), REQUEST_PERMISSIONS)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_PERMISSIONS && grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+            navigateToSetup()
         }
     }
 

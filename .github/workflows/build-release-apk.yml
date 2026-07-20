@@ -1,0 +1,151 @@
+name: Build and Release APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Java
+        uses: actions/setup-java@v4.7.1
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build APK files
+        run: |
+          set -euo pipefail
+
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          BT="$SDK/build-tools/34.0.0"
+          ANDROID_JAR="$SDK/platforms/android-34/android.jar"
+          KOTLIN_LIB="/usr/share/kotlinc/lib"
+          OUT="$RUNNER_TEMP/marul-apk-build"
+          KEYSTORE="$OUT/marul-release.jks"
+
+          VERSION_NAME=$(python - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('app/build.gradle').read_text()
+          match = re.search(r'versionName\s+"([^"]+)"', text)
+          print(match.group(1) if match else '1.0.0')
+          PY
+          )
+
+          VERSION_CODE=$(python - <<'PY'
+          import pathlib, re
+          text = pathlib.Path('app/build.gradle').read_text()
+          match = re.search(r'versionCode\s+(\d+)', text)
+          print(match.group(1) if match else '1')
+          PY
+          )
+
+          rm -rf "$OUT" apk-builds
+          mkdir -p "$OUT/classes" "$OUT/java" "$OUT/dex" apk-builds
+
+          "$BT/aapt2" compile --dir app/src/main/res -o "$OUT/res.zip"
+          "$BT/aapt2" link \
+            --manifest app/src/main/AndroidManifest.xml \
+            -I "$ANDROID_JAR" \
+            --java "$OUT/java" \
+            --auto-add-overlay \
+            --min-sdk-version 26 \
+            --target-sdk-version 34 \
+            --version-code "$VERSION_CODE" \
+            --version-name "$VERSION_NAME" \
+            --debug-mode \
+            -o "$OUT/debug-base-unsigned.apk" \
+            "$OUT/res.zip"
+
+          "$BT/aapt2" link \
+            --manifest app/src/main/AndroidManifest.xml \
+            -I "$ANDROID_JAR" \
+            --auto-add-overlay \
+            --min-sdk-version 26 \
+            --target-sdk-version 34 \
+            --version-code "$VERSION_CODE" \
+            --version-name "$VERSION_NAME" \
+            -o "$OUT/release-base-unsigned.apk" \
+            "$OUT/res.zip"
+
+          find "$OUT/java" -name '*.java' -print0 | xargs -0 javac -source 11 -target 11 -cp "$ANDROID_JAR" -d "$OUT/classes"
+          find app/src/main/java -name '*.kt' | sort > "$OUT/kotlin-sources.txt"
+
+          kotlinc @"$OUT/kotlin-sources.txt" \
+            -classpath "$ANDROID_JAR:$OUT/classes:$KOTLIN_LIB/kotlin-stdlib.jar:$KOTLIN_LIB/kotlin-stdlib-jdk7.jar:$KOTLIN_LIB/kotlin-stdlib-jdk8.jar:$KOTLIN_LIB/kotlinx-coroutines-core-jvm.jar" \
+            -d "$OUT/classes"
+
+          "$BT/d8" \
+            --min-api 26 \
+            --lib "$ANDROID_JAR" \
+            --output "$OUT/dex" \
+            $(find "$OUT/classes" -name '*.class' | tr '\n' ' ') \
+            "$KOTLIN_LIB/kotlin-stdlib.jar" \
+            "$KOTLIN_LIB/kotlin-stdlib-jdk7.jar" \
+            "$KOTLIN_LIB/kotlin-stdlib-jdk8.jar" \
+            "$KOTLIN_LIB/kotlinx-coroutines-core-jvm.jar"
+
+          cp "$OUT/debug-base-unsigned.apk" "$OUT/debug-unsigned.apk"
+          cp "$OUT/release-base-unsigned.apk" "$OUT/release-unsigned.apk"
+          (
+            cd "$OUT/dex"
+            zip -q -r "$OUT/debug-unsigned.apk" .
+            zip -q -r "$OUT/release-unsigned.apk" .
+          )
+
+          keytool -genkeypair \
+            -keystore "$KEYSTORE" \
+            -storepass android \
+            -keypass android \
+            -alias marulrelease \
+            -dname "CN=Marul Otomasyon, OU=CI, O=GitHub, L=Remote, ST=Remote, C=TR" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650
+
+          "$BT/zipalign" -f 4 "$OUT/debug-unsigned.apk" "$OUT/debug-aligned.apk"
+          "$BT/zipalign" -f 4 "$OUT/release-unsigned.apk" "$OUT/release-aligned.apk"
+
+          "$BT/apksigner" sign --v4-signing-enabled false --ks "$KEYSTORE" --ks-key-alias marulrelease --ks-pass pass:android --key-pass pass:android --out apk-builds/marul-otomasyon-debug.apk "$OUT/debug-aligned.apk"
+          "$BT/apksigner" sign --v4-signing-enabled false --ks "$KEYSTORE" --ks-key-alias marulrelease --ks-pass pass:android --key-pass pass:android --out apk-builds/marul-otomasyon-release.apk "$OUT/release-aligned.apk"
+
+          "$BT/apksigner" verify --verbose apk-builds/marul-otomasyon-debug.apk
+          "$BT/apksigner" verify --verbose apk-builds/marul-otomasyon-release.apk
+
+          {
+            echo "VERSION_NAME=$VERSION_NAME"
+            echo "VERSION_CODE=$VERSION_CODE"
+          } >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION_NAME}"
+          TITLE="Marul Otomasyon ${TAG}"
+          NOTES=$(cat <<EOF
+          Otomatik APK yayını
+
+          - Sürüm: ${VERSION_NAME}
+          - Sürüm kodu: ${VERSION_CODE}
+          - Commit: ${GITHUB_SHA}
+          EOF
+          )
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES"
+            gh release upload "$TAG" apk-builds/marul-otomasyon-debug.apk apk-builds/marul-otomasyon-release.apk --clobber
+          else
+            gh release create "$TAG" apk-builds/marul-otomasyon-debug.apk apk-builds/marul-otomasyon-release.apk --title "$TITLE" --notes "$NOTES"
+          fi

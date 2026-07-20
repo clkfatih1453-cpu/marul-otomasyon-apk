@@ -1,6 +1,7 @@
 package com.marul.otomasyon.ui
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -9,18 +10,21 @@ import android.widget.ProgressBar
 import android.widget.SimpleAdapter
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.marul.otomasyon.R
 import com.marul.otomasyon.manager.BluetoothCallback
 import com.marul.otomasyon.manager.BluetoothManager
 import com.marul.otomasyon.manager.SettingsManager
 import com.marul.otomasyon.util.Constants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-class SetupActivity : AppCompatActivity(), BluetoothCallback {
+class SetupActivity : Activity(), BluetoothCallback {
     private lateinit var bluetoothManager: BluetoothManager
     private lateinit var settingsManager: SettingsManager
+    private lateinit var activityScope: CoroutineScope
     private lateinit var progressBar: ProgressBar
     private lateinit var deviceListView: ListView
     private lateinit var edtSsid: EditText
@@ -37,6 +41,7 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_setup)
 
+        activityScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         bluetoothManager = BluetoothManager(this)
         settingsManager = SettingsManager(this)
 
@@ -72,7 +77,7 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
         }
 
         btnConnect.setOnClickListener {
-            if (deviceList.isNotEmpty()) {
+            if (deviceList.isNotEmpty() && deviceListView.checkedItemPosition != ListView.INVALID_POSITION) {
                 selectedDeviceAddress = deviceList[deviceListView.checkedItemPosition]["address"] ?: ""
                 if (selectedDeviceAddress.isNotEmpty()) {
                     bluetoothManager.stopScan()
@@ -123,7 +128,7 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
 
     @SuppressLint("MissingPermission")
     private fun sendWifiConfigToDevice(ssid: String, password: String, phMax: Float, phMin: Float, ecMin: Float) {
-        lifecycleScope.launch {
+        activityScope.launch {
             try {
                 bluetoothManager.writeCharacteristic(Constants.CHAR_SSID_UUID, ssid)
                 Thread.sleep(100)
@@ -191,6 +196,7 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
 
     override fun onDestroy() {
         super.onDestroy()
+        activityScope.cancel()
         bluetoothManager.disconnect()
     }
 }

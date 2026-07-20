@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Marul Otomasyon</string>
+    <string name="app_name">İnci Otomasyon</string>
 
     <!-- Ana Ekran -->
     <string name="title_home">Ana Paneli</string>
@@ -33,7 +33,7 @@
     <string name="label_circulation">Sirkulasyon</string>
     <string name="btn_on">AÇ</string>
     <string name="btn_off">KAPAT</string>
-    <string name="btn_reset">SİFIRLA</string>
+    <string name="btn_reset">SIFIRLA</string>
 
     <!-- Ayarlar -->
     <string name="title_settings">Ayarlar</string>

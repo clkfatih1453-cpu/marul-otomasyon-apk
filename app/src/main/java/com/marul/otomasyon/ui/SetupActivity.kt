@@ -1,5 +1,7 @@
 package com.marul.otomasyon.ui
 
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.Button
@@ -63,7 +65,12 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
         val btnSendWifi = findViewById<Button>(R.id.btn_send_wifi)
 
         btnScan.setOnClickListener {
-            if (bluetoothManager.isBluetoothSupported() && bluetoothManager.isBluetoothEnabled()) {
+            if (!bluetoothManager.isBluetoothEnabled()) {
+                @Suppress("DEPRECATION")
+                startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                return@setOnClickListener
+            }
+            if (bluetoothManager.isBluetoothSupported()) {
                 deviceList.clear()
                 progressBar.progress = 0
                 statusText.text = getString(R.string.msg_scanning)
@@ -125,6 +132,7 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
 
     @SuppressLint("MissingPermission")
     private fun sendWifiConfigToDevice(ssid: String, password: String, phMax: Float, phMin: Float, ecMin: Float) {
+        val savedConfig = settingsManager.getWifiConfig()
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 bluetoothManager.writeCharacteristic(Constants.CHAR_SSID_UUID, ssid)
@@ -136,6 +144,10 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
                 bluetoothManager.writeCharacteristic(Constants.CHAR_PH_MIN_UUID, phMin.toString())
                 delay(100)
                 bluetoothManager.writeCharacteristic(Constants.CHAR_EC_MIN_UUID, ecMin.toString())
+                delay(100)
+                bluetoothManager.writeCharacteristic(Constants.CHAR_DOSAGE_TIME_UUID, savedConfig.dosageTime.toString())
+                delay(100)
+                bluetoothManager.writeCharacteristic(Constants.CHAR_MEASUREMENT_PERIOD_UUID, savedConfig.measurementPeriod.toString())
 
                 settingsManager.saveWifiConfig(
                     com.marul.otomasyon.model.WifiConfig(
@@ -143,7 +155,9 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
                         password = password,
                         phMax = phMax,
                         phMin = phMin,
-                        ecMin = ecMin
+                        ecMin = ecMin,
+                        dosageTime = savedConfig.dosageTime,
+                        measurementPeriod = savedConfig.measurementPeriod
                     )
                 )
 

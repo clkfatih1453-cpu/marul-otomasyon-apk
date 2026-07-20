@@ -5,6 +5,8 @@ object Constants {
     const val BLYNK_TEMPLATE_ID = "TMPL6e0eGKAVX"
     const val BLYNK_TEMPLATE_NAME = "marul otomasyon"
     const val BLYNK_AUTH_TOKEN = "8Cj2uteylTLTPjiwbkFyCn_0assoU6Nm"
+    const val BLYNK_BASE_URL = "https://blynk.cloud/external/api"
+    const val BLYNK_POLL_INTERVAL_MS = 3000L
 
     // BLE UUIDs
     const val SERVICE_UUID = "0000180A-0000-1000-8000-00805f9b34fb"
@@ -14,6 +16,9 @@ object Constants {
     const val CHAR_PH_MIN_UUID = "00000004-0000-1000-8000-00805f9b34fb"
     const val CHAR_EC_MIN_UUID = "00000005-0000-1000-8000-00805f9b34fb"
     const val CHAR_DATA_UUID = "00000006-0000-1000-8000-00805f9b34fb"
+    const val CHAR_DOSAGE_TIME_UUID = "00000007-0000-1000-8000-00805f9b34fb"
+    const val CHAR_MEASUREMENT_PERIOD_UUID = "00000008-0000-1000-8000-00805f9b34fb"
+    const val BLE_CCCD_UUID = "00002902-0000-1000-8000-00805f9b34fb"
 
     // Virtual Pins (Blynk)
     const val V_PH = 0
@@ -28,6 +33,7 @@ object Constants {
     const val V_FLOW_PH = 9
     const val V_GUBRE_B = 10
     const val V_TANK_LEVEL = 11
+    const val V_CIRCULATION = 12
 
     // Default Values
     const val DEFAULT_PH_MAX = 6.2f

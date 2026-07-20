@@ -9,10 +9,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.marul.otomasyon.R
+import com.marul.otomasyon.manager.BlynkCallback
 import com.marul.otomasyon.manager.BlynkManager
 import com.marul.otomasyon.manager.SensorDataManager
 import com.marul.otomasyon.manager.SettingsManager
-import kotlinx.coroutines.flow.collect
+import com.marul.otomasyon.util.Constants
 import kotlinx.coroutines.launch
 
 class ControlActivity : AppCompatActivity() {
@@ -30,6 +31,9 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var switchFertilizerA: Switch
     private lateinit var switchFertilizerB: Switch
     private lateinit var switchCirculation: Switch
+
+    // Observer'dan gelen güncellemeler listener'ı tekrar tetiklemesin
+    private var isUpdatingFromData = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,23 +63,36 @@ class ControlActivity : AppCompatActivity() {
         val btnReset = findViewById<Button>(R.id.btn_reset)
 
         switchPhDown.setOnCheckedChangeListener { _, isChecked ->
-            sensorDataManager.setPumpStatus(phDown = isChecked)
+            if (!isUpdatingFromData) {
+                sensorDataManager.setPumpStatus(phDown = isChecked)
+                blynkManager.virtualWrite(Constants.V_PH_DOWN, if (isChecked) 1 else 0)
+            }
         }
 
         switchFertilizerA.setOnCheckedChangeListener { _, isChecked ->
-            sensorDataManager.setPumpStatus(fertilizerA = isChecked)
+            if (!isUpdatingFromData) {
+                sensorDataManager.setPumpStatus(fertilizerA = isChecked)
+                blynkManager.virtualWrite(Constants.V_GUBRE_A, if (isChecked) 1 else 0)
+            }
         }
 
         switchFertilizerB.setOnCheckedChangeListener { _, isChecked ->
-            sensorDataManager.setPumpStatus(fertilizerB = isChecked)
+            if (!isUpdatingFromData) {
+                sensorDataManager.setPumpStatus(fertilizerB = isChecked)
+                blynkManager.virtualWrite(Constants.V_GUBRE_B, if (isChecked) 1 else 0)
+            }
         }
 
         switchCirculation.setOnCheckedChangeListener { _, isChecked ->
-            sensorDataManager.setPumpStatus(circulation = isChecked)
+            if (!isUpdatingFromData) {
+                sensorDataManager.setPumpStatus(circulation = isChecked)
+                blynkManager.virtualWrite(Constants.V_CIRCULATION, if (isChecked) 1 else 0)
+            }
         }
 
         btnReset.setOnClickListener {
             sensorDataManager.reset()
+            blynkManager.virtualWrite(Constants.V_RESET, 1)
             Toast.makeText(this, "Sistem sıfırlandı", Toast.LENGTH_SHORT).show()
         }
     }
@@ -93,41 +110,78 @@ class ControlActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             sensorDataManager.pumpStatus.collect { status ->
+                isUpdatingFromData = true
                 switchPhDown.isChecked = status.phDownRunning
                 switchFertilizerA.isChecked = status.fertilizerARunning
                 switchFertilizerB.isChecked = status.fertilizerBRunning
                 switchCirculation.isChecked = status.circulationRunning
+                isUpdatingFromData = false
+            }
+        }
+
+        lifecycleScope.launch {
+            blynkManager.connectionState.collect { connected ->
+                val msg = if (connected) "🟢 Blynk Bağlı" else "🔴 Blynk Bağlantısı Kesildi"
+                title = msg
             }
         }
     }
 
     private fun connectToBlynk() {
-        blynkManager.connect(object : com.marul.otomasyon.manager.BlynkCallback {
+        blynkManager.connect(object : BlynkCallback {
             override fun onConnected() {
-                Toast.makeText(this@ControlActivity, "Blynk Bağlandı", Toast.LENGTH_SHORT).show()
+                runOnUiThread {
+                    Toast.makeText(this@ControlActivity, "Blynk Bağlandı", Toast.LENGTH_SHORT).show()
+                }
             }
 
             override fun onDisconnected() {
-                Toast.makeText(this@ControlActivity, "Blynk Bağlantısı Kesildi", Toast.LENGTH_SHORT).show()
+                runOnUiThread {
+                    Toast.makeText(this@ControlActivity, "Blynk Bağlantısı Kesildi", Toast.LENGTH_SHORT).show()
+                }
             }
 
             override fun onDataReceived(pin: Int, value: String) {
-                updateSensorData(pin, value)
+                runOnUiThread { updateSensorData(pin, value) }
             }
 
             override fun onError(message: String) {
-                Toast.makeText(this@ControlActivity, "Hata: $message", Toast.LENGTH_SHORT).show()
+                runOnUiThread {
+                    Toast.makeText(this@ControlActivity, "Hata: $message", Toast.LENGTH_SHORT).show()
+                }
             }
         })
     }
 
     private fun updateSensorData(pin: Int, value: String) {
-        val floatValue = value.toFloatOrNull() ?: return
         when (pin) {
-            0 -> sensorDataManager.updatePh(floatValue)
-            1 -> sensorDataManager.updateEc(floatValue)
-            2 -> sensorDataManager.updateTemperature(floatValue)
-            11 -> sensorDataManager.updateTankLevel(floatValue.toInt())
+            Constants.V_PH -> value.toFloatOrNull()?.let { sensorDataManager.updatePh(it) }
+            Constants.V_EC -> value.toFloatOrNull()?.let { sensorDataManager.updateEc(it) }
+            Constants.V_TEMP -> value.toFloatOrNull()?.let { sensorDataManager.updateTemperature(it) }
+            Constants.V_TANK_LEVEL -> value.toFloatOrNull()?.let { sensorDataManager.updateTankLevel(it.toInt()) }
+            Constants.V_FLOW_A -> value.toFloatOrNull()?.let { sensorDataManager.updateFertilizerAFlowRate(it) }
+            Constants.V_FLOW_B -> value.toFloatOrNull()?.let { sensorDataManager.updateFertilizerBFlowRate(it) }
+            Constants.V_FLOW_PH -> value.toFloatOrNull()?.let { sensorDataManager.updatePhFlowRate(it) }
+            Constants.V_PH_DOWN -> {
+                isUpdatingFromData = true
+                sensorDataManager.setPumpStatus(phDown = value == "1")
+                isUpdatingFromData = false
+            }
+            Constants.V_GUBRE_A -> {
+                isUpdatingFromData = true
+                sensorDataManager.setPumpStatus(fertilizerA = value == "1")
+                isUpdatingFromData = false
+            }
+            Constants.V_GUBRE_B -> {
+                isUpdatingFromData = true
+                sensorDataManager.setPumpStatus(fertilizerB = value == "1")
+                isUpdatingFromData = false
+            }
+            Constants.V_CIRCULATION -> {
+                isUpdatingFromData = true
+                sensorDataManager.setPumpStatus(circulation = value == "1")
+                isUpdatingFromData = false
+            }
         }
     }
 

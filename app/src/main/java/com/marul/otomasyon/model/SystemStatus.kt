@@ -16,7 +16,7 @@ data class SensorData(
     val temperature: Float = 25.0f,
     val tankLevel: Int = 100,
     val phFlowRate: Float = 0.0f,
-    val fertiilizerAFlowRate: Float = 0.0f,
+    val fertilizerAFlowRate: Float = 0.0f,
     val fertilizerBFlowRate: Float = 0.0f,
     val timestamp: Long = System.currentTimeMillis()
 )

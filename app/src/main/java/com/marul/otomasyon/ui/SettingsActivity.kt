@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.marul.otomasyon.R
@@ -20,6 +21,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var edtMqttProvider: EditText
     private lateinit var edtMqttUrl: EditText
     private lateinit var edtMqttWsUrl: EditText
+    private lateinit var edtMqttUsername: EditText
+    private lateinit var edtMqttPassword: EditText
+    private lateinit var switchMqttTls: Switch
     private lateinit var edtPhMax: EditText
     private lateinit var edtPhMin: EditText
     private lateinit var edtEcMin: EditText
@@ -42,6 +46,9 @@ class SettingsActivity : AppCompatActivity() {
         edtMqttProvider = findViewById(R.id.edt_mqtt_provider)
         edtMqttUrl = findViewById(R.id.edt_mqtt_url)
         edtMqttWsUrl = findViewById(R.id.edt_mqtt_ws_url)
+        edtMqttUsername = findViewById(R.id.edt_mqtt_username)
+        edtMqttPassword = findViewById(R.id.edt_mqtt_password)
+        switchMqttTls = findViewById(R.id.switch_mqtt_tls)
         edtPhMax = findViewById(R.id.edt_ph_max)
         edtPhMin = findViewById(R.id.edt_ph_min)
         edtEcMin = findViewById(R.id.edt_ec_min)
@@ -65,6 +72,9 @@ class SettingsActivity : AppCompatActivity() {
         edtMqttProvider.setText(settingsManager.getMqttProvider())
         edtMqttUrl.setText(settingsManager.getMqttUrl())
         edtMqttWsUrl.setText(settingsManager.getMqttWsUrl())
+        edtMqttUsername.setText(settingsManager.getMqttUsername())
+        edtMqttPassword.setText(settingsManager.getMqttPassword())
+        switchMqttTls.isChecked = settingsManager.getMqttUseTls()
         val config = settingsManager.getWifiConfig()
         edtPhMax.setText(config.phMax.toString())
         edtPhMin.setText(config.phMin.toString())
@@ -81,6 +91,9 @@ class SettingsActivity : AppCompatActivity() {
             val provider = edtMqttProvider.text.toString().trim()
             val mqttUrl = edtMqttUrl.text.toString().trim()
             val mqttWsUrl = edtMqttWsUrl.text.toString().trim()
+            val mqttUser = edtMqttUsername.text.toString().trim()
+            val mqttPass = edtMqttPassword.text.toString()
+            var useTls = switchMqttTls.isChecked
             val phMax = edtPhMax.text.toString().toFloat()
             val phMin = edtPhMin.text.toString().toFloat()
             val ecMin = edtEcMin.text.toString().toFloat()
@@ -92,11 +105,28 @@ class SettingsActivity : AppCompatActivity() {
                 if (endpoint != null) {
                     host = endpoint.first
                     port = endpoint.second
+                    if (endpoint.third) useTls = true
                 }
             }
             host = normalizeBrokerHost(host, provider)
+            if (host.endsWith(".hivemq.cloud")) {
+                useTls = true
+                if (port == Constants.MQTT_DEFAULT_PORT) port = 8883
+            }
             if (host.isBlank()) {
                 Toast.makeText(this, "Broker IP veya MQTT URL gerekli", Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (useTls && port <= 0) {
+                Toast.makeText(this, "TLS için geçerli port girin (öneri: 8883)", Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (useTls && mqttUser.isBlank()) {
+                Toast.makeText(this, "HiveMQ Cloud için kullanıcı adı gerekli", Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (useTls && mqttPass.isBlank()) {
+                Toast.makeText(this, "HiveMQ Cloud için şifre gerekli", Toast.LENGTH_SHORT).show()
                 return
             }
             if (phMax <= phMin) {
@@ -110,6 +140,9 @@ class SettingsActivity : AppCompatActivity() {
             settingsManager.saveMqttProvider(provider)
             settingsManager.saveMqttUrl(mqttUrl)
             settingsManager.saveMqttWsUrl(mqttWsUrl)
+            settingsManager.saveMqttUsername(mqttUser)
+            settingsManager.saveMqttPassword(mqttPass)
+            settingsManager.saveMqttUseTls(useTls)
             settingsManager.updatePhMax(phMax)
             settingsManager.updatePhMin(phMin)
             settingsManager.updateEcMin(ecMin)
@@ -123,14 +156,16 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun parseMqttEndpoint(url: String): Pair<String, Int>? {
+    private fun parseMqttEndpoint(url: String): Triple<String, Int, Boolean>? {
         return try {
             val normalized = if (url.contains("://")) url else "mqtt://$url"
             val uri = URI(normalized)
             val host = uri.host?.trim()?.lowercase().orEmpty()
             if (host.isBlank()) return null
             val port = if (uri.port > 0) uri.port else Constants.MQTT_DEFAULT_PORT
-            host to port
+            val scheme = uri.scheme?.lowercase().orEmpty()
+            val tls = scheme == "ssl" || scheme == "mqtts" || scheme == "tls"
+            Triple(host, port, tls)
         } catch (_: URISyntaxException) {
             null
         }

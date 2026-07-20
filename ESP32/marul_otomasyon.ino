@@ -31,6 +31,7 @@
 #include <WiFiUDP.h>
 #include <Preferences.h>
 #include "BluetoothSerial.h"
+#include <WiFiClientSecure.h>
 
 #define MQTT_PORT     1883
 #define MQTT_CLIENT   "esp32_marul"
@@ -102,6 +103,7 @@
 // ============================================================
 BluetoothSerial    btSerial;
 WiFiClient         wifiClient;
+WiFiClientSecure   wifiSecureClient;
 PubSubClient       mqtt(wifiClient);
 DHT                dht(PIN_DHT22, DHT22);
 OneWire            oneWire(PIN_DS18B20);
@@ -114,6 +116,10 @@ Preferences        prefs;
 String savedSSID   = "";
 String savedPass   = "";
 String savedMqtt   = "";
+String savedMqttUser = "";
+String savedMqttPass = "";
+int    savedMqttPort = MQTT_PORT;
+bool   savedMqttTls  = false;
 bool   configMode  = false; // BT provisioning modu aktif mi
 
 // ============================================================
@@ -385,7 +391,12 @@ void connectMQTT() {
     int retries = 0;
     while (!mqtt.connected() && retries < 10) {
         Serial.printf("MQTT bağlanıyor... (deneme %d)\n", retries + 1);
-        bool ok = mqtt.connect(MQTT_CLIENT);
+        bool ok = false;
+        if (!savedMqttUser.isEmpty()) {
+            ok = mqtt.connect(MQTT_CLIENT, savedMqttUser.c_str(), savedMqttPass.c_str());
+        } else {
+            ok = mqtt.connect(MQTT_CLIENT);
+        }
         if (ok) {
             Serial.println("MQTT bağlandı!");
             // Tüm kontrol topiclerini dinle
@@ -509,6 +520,11 @@ void loadPreferences() {
     savedSSID  = prefs.getString("wifi_ssid", "");
     savedPass  = prefs.getString("wifi_pass", "");
     savedMqtt  = prefs.getString("mqtt_host", "");
+    savedMqttPort = prefs.getInt("mqtt_port", MQTT_PORT);
+    savedMqttUser = prefs.getString("mqtt_user", "");
+    savedMqttPass = prefs.getString("mqtt_pass", "");
+    savedMqttTls  = prefs.getBool("mqtt_tls", false);
+    if (savedMqttTls && savedMqttPort == MQTT_PORT) savedMqttPort = 8883;
     String pumpTmr  = prefs.getString("pump_tmr",  "00:00 - 24:00");
     String lightTmr = prefs.getString("light_tmr", "06:00 - 22:00");
     prefs.end();
@@ -537,7 +553,7 @@ void runBluetoothConfig() {
     btSerial.println("=== İnci Tarım ESP32 Yapılandırma ===");
     btSerial.println("Mevcut: SSID=" + (savedSSID.isEmpty() ? "(yok)" : savedSSID)
                      + " MQTT=" + (savedMqtt.isEmpty() ? "(yok)" : savedMqtt));
-    btSerial.println("Komutlar: SSID:... PASS:... MQTT:... SAVE STATUS");
+    btSerial.println("Komutlar: SSID:... PASS:... MQTT:... PORT:1883 TLS:0/1 USER:... MPASS:... SAVE STATUS");
 
     while (true) {
         // BOOT butonuna 3 sn basılırsa çık (debug için)
@@ -574,6 +590,28 @@ void runBluetoothConfig() {
             savedMqtt = rxBuf.substring(5);
             btSerial.println("OK:MQTT=" + savedMqtt);
         }
+        else if (rxBuf.startsWith("PORT:")) {
+            int p = rxBuf.substring(5).toInt();
+            if (p > 0 && p < 65536) {
+                savedMqttPort = p;
+                btSerial.println("OK:PORT=" + String(savedMqttPort));
+            } else {
+                btSerial.println("HATA: Gecersiz PORT");
+            }
+        }
+        else if (rxBuf.startsWith("TLS:")) {
+            savedMqttTls = (rxBuf.substring(4).toInt() == 1);
+            if (savedMqttTls && savedMqttPort == MQTT_PORT) savedMqttPort = 8883;
+            btSerial.println(String("OK:TLS=") + (savedMqttTls ? "1" : "0"));
+        }
+        else if (rxBuf.startsWith("USER:")) {
+            savedMqttUser = rxBuf.substring(5);
+            btSerial.println("OK:USER=" + (savedMqttUser.isEmpty() ? "(bos)" : savedMqttUser));
+        }
+        else if (rxBuf.startsWith("MPASS:")) {
+            savedMqttPass = rxBuf.substring(6);
+            btSerial.println("OK:MPASS=****");
+        }
         else if (rxBuf == "SAVE") {
             if (savedSSID.isEmpty() || savedPass.isEmpty() || savedMqtt.isEmpty()) {
                 btSerial.println("HATA: Tum alanlari girin (SSID, PASS, MQTT)");
@@ -582,6 +620,10 @@ void runBluetoothConfig() {
                 prefs.putString("wifi_ssid", savedSSID);
                 prefs.putString("wifi_pass", savedPass);
                 prefs.putString("mqtt_host", savedMqtt);
+                prefs.putInt("mqtt_port", savedMqttPort);
+                prefs.putBool("mqtt_tls", savedMqttTls);
+                prefs.putString("mqtt_user", savedMqttUser);
+                prefs.putString("mqtt_pass", savedMqttPass);
                 prefs.end();
                 btSerial.println("SAVED");
                 btSerial.println("ESP32 yeniden baslatiliyor...");
@@ -591,13 +633,17 @@ void runBluetoothConfig() {
             }
         }
         else if (rxBuf == "STATUS") {
-            btSerial.println("SSID:" + savedSSID + "|MQTT:" + savedMqtt);
+            btSerial.println("SSID:" + savedSSID + "|MQTT:" + savedMqtt + "|PORT:" + String(savedMqttPort) + "|TLS:" + String(savedMqttTls ? "1" : "0"));
         }
         else if (rxBuf == "RESET") {
             prefs.begin("marul", false);
             prefs.remove("wifi_ssid");
             prefs.remove("wifi_pass");
             prefs.remove("mqtt_host");
+            prefs.remove("mqtt_port");
+            prefs.remove("mqtt_tls");
+            prefs.remove("mqtt_user");
+            prefs.remove("mqtt_pass");
             prefs.end();
             btSerial.println("CONFIG SIFIRLANDI - Yeniden baslatiliyor...");
             delay(500);
@@ -667,7 +713,13 @@ void setup() {
     timeClient.begin();
     timeClient.update();
 
-    mqtt.setServer(savedMqtt.c_str(), MQTT_PORT);
+    if (savedMqttTls) {
+        wifiSecureClient.setInsecure();
+        mqtt.setClient(wifiSecureClient);
+    } else {
+        mqtt.setClient(wifiClient);
+    }
+    mqtt.setServer(savedMqtt.c_str(), savedMqttPort);
     mqtt.setCallback(onMqttMessage);
     mqtt.setKeepAlive(30);
     connectMQTT();

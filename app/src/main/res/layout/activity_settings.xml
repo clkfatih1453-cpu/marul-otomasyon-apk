@@ -84,14 +84,42 @@
             android:layout_height="wrap_content"
             android:hint="WebSocket URL (ör: ws://192.168.1.100:9001/mqtt)"
             android:inputType="textUri"
-            android:layout_marginBottom="@dimen/padding_small"
+            android:layout_marginBottom="@dimen/padding_medium"
             android:padding="@dimen/padding_medium"
             android:background="@drawable/rounded_background" />
+
+        <EditText
+            android:id="@+id/edt_mqtt_username"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="MQTT Kullanıcı Adı (HiveMQ Cloud için)"
+            android:inputType="textEmailAddress"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <EditText
+            android:id="@+id/edt_mqtt_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="MQTT Şifre (HiveMQ Cloud için)"
+            android:inputType="textPassword"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <Switch
+            android:id="@+id/switch_mqtt_tls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TLS/SSL kullan (HiveMQ Cloud: AÇIK)"
+            android:textColor="#1B5E20"
+            android:layout_marginBottom="@dimen/padding_small" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Not: Uygulama aktif bağlantıda Broker IP + Port kullanır. MQTT URL girerseniz host/port otomatik çıkarılır."
+            android:text="Not: HiveMQ Cloud için TLS açık, port 8883, kullanıcı adı ve şifre gerekli. MQTT URL girerseniz host/port otomatik çıkarılır."
             android:textSize="@dimen/text_size_small"
             android:textColor="#666666"
             android:layout_marginBottom="@dimen/padding_large" />

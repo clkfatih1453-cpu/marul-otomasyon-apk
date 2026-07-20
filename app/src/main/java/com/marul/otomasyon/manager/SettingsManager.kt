@@ -81,6 +81,30 @@ class SettingsManager(context: Context) {
         return preferences.getString(Constants.PREF_MQTT_WS_URL, "") ?: ""
     }
 
+    fun saveMqttUsername(value: String) {
+        preferences.edit().putString(Constants.PREF_MQTT_USERNAME, value).apply()
+    }
+
+    fun getMqttUsername(): String {
+        return preferences.getString(Constants.PREF_MQTT_USERNAME, "") ?: ""
+    }
+
+    fun saveMqttPassword(value: String) {
+        preferences.edit().putString(Constants.PREF_MQTT_PASSWORD, value).apply()
+    }
+
+    fun getMqttPassword(): String {
+        return preferences.getString(Constants.PREF_MQTT_PASSWORD, "") ?: ""
+    }
+
+    fun saveMqttUseTls(value: Boolean) {
+        preferences.edit().putBoolean(Constants.PREF_MQTT_USE_TLS, value).apply()
+    }
+
+    fun getMqttUseTls(): Boolean {
+        return preferences.getBoolean(Constants.PREF_MQTT_USE_TLS, false)
+    }
+
     fun updatePhMax(value: Float) {
         preferences.edit().putFloat(Constants.PREF_PH_MAX, value).apply()
     }

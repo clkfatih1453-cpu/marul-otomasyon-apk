@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.marul.otomasyon.R
 import com.marul.otomasyon.manager.SettingsManager
+import com.marul.otomasyon.util.Constants
 import kotlinx.coroutines.*
 import java.net.URI
 import java.net.URISyntaxException
@@ -39,6 +40,7 @@ class BtProvisionActivity : AppCompatActivity() {
     private lateinit var edtPass: EditText
     private lateinit var edtMqttIp: EditText
     private lateinit var txtLog: TextView
+    private lateinit var settingsManager: SettingsManager
 
     private var socket: BluetoothSocket? = null
     private var outputStream: OutputStream? = null
@@ -64,9 +66,9 @@ class BtProvisionActivity : AppCompatActivity() {
         edtMqttIp    = findViewById(R.id.edt_mqtt_ip)
         txtLog       = findViewById(R.id.txt_log)
 
-        // MQTT IP'yi ayarlardan otomatik doldur
-        val sm = SettingsManager(this)
-        val savedMqtt = sm.getMqttHost()
+        settingsManager = SettingsManager(this)
+        // MQTT host'u ayarlardan otomatik doldur
+        val savedMqtt = settingsManager.getMqttHost()
         if (savedMqtt.isNotBlank()) edtMqttIp.setText(savedMqtt)
 
         btnConnect.setOnClickListener { connectBluetooth() }
@@ -169,6 +171,11 @@ class BtProvisionActivity : AppCompatActivity() {
         val ssid = edtSsid.text.toString().trim()
         val pass = edtPass.text.toString()
         val mqtt = normalizeMqttHost(edtMqttIp.text.toString().trim())
+        var mqttPort = settingsManager.getMqttPort()
+        val mqttUser = settingsManager.getMqttUsername()
+        val mqttPass = settingsManager.getMqttPassword()
+        val useTls = settingsManager.getMqttUseTls()
+        if (useTls && mqttPort == Constants.MQTT_DEFAULT_PORT) mqttPort = 8883
 
         if (ssid.isBlank() || pass.isBlank() || mqtt.isBlank()) {
             toast("Tüm alanları doldurun")
@@ -183,11 +190,23 @@ class BtProvisionActivity : AppCompatActivity() {
                 delay(300)
                 sendLine("MQTT:$mqtt")
                 delay(300)
+                sendLine("PORT:$mqttPort")
+                delay(200)
+                sendLine("TLS:${if (useTls) "1" else "0"}")
+                delay(200)
+                sendLine("USER:$mqttUser")
+                delay(200)
+                sendLine("MPASS:$mqttPass")
+                delay(200)
                 sendLine("SAVE")
                 withContext(Dispatchers.Main) {
                     appendLog("→ SSID:$ssid")
                     appendLog("→ PASS:****")
                     appendLog("→ MQTT:$mqtt")
+                    appendLog("→ PORT:$mqttPort")
+                    appendLog("→ TLS:${if (useTls) "1" else "0"}")
+                    appendLog("→ USER:${if (mqttUser.isBlank()) "(bos)" else mqttUser}")
+                    appendLog("→ MPASS:${if (mqttPass.isBlank()) "(bos)" else "****"}")
                     appendLog("→ SAVE")
                 }
             } catch (e: Exception) {

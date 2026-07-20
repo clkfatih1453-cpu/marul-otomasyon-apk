@@ -63,7 +63,19 @@ jobs:
             --target-sdk-version 34 \
             --version-code "$VERSION_CODE" \
             --version-name "$VERSION_NAME" \
-            -o "$OUT/base-unsigned.apk" \
+            --debug-mode \
+            -o "$OUT/debug-base-unsigned.apk" \
+            "$OUT/res.zip"
+
+          "$BT/aapt2" link \
+            --manifest app/src/main/AndroidManifest.xml \
+            -I "$ANDROID_JAR" \
+            --auto-add-overlay \
+            --min-sdk-version 26 \
+            --target-sdk-version 34 \
+            --version-code "$VERSION_CODE" \
+            --version-name "$VERSION_NAME" \
+            -o "$OUT/release-base-unsigned.apk" \
             "$OUT/res.zip"
 
           find "$OUT/java" -name '*.java' -print0 | xargs -0 javac -source 11 -target 11 -cp "$ANDROID_JAR" -d "$OUT/classes"
@@ -83,8 +95,8 @@ jobs:
             "$KOTLIN_LIB/kotlin-stdlib-jdk8.jar" \
             "$KOTLIN_LIB/kotlinx-coroutines-core-jvm.jar"
 
-          cp "$OUT/base-unsigned.apk" "$OUT/debug-unsigned.apk"
-          cp "$OUT/base-unsigned.apk" "$OUT/release-unsigned.apk"
+          cp "$OUT/debug-base-unsigned.apk" "$OUT/debug-unsigned.apk"
+          cp "$OUT/release-base-unsigned.apk" "$OUT/release-unsigned.apk"
           (
             cd "$OUT/dex"
             zip -q -r "$OUT/debug-unsigned.apk" .

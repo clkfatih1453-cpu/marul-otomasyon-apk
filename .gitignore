@@ -21,6 +21,7 @@ proguard_project.txt
 *.dex
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 .DS_Store
 /captures
 .externalNativeBuild

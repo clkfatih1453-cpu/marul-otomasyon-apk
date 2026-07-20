@@ -1,12 +1,9 @@
 package com.marul.otomasyon.util
 
 object Constants {
-    // Blynk Configuration
-    const val BLYNK_TEMPLATE_ID = "TMPL6e0eGKAVX"
-    const val BLYNK_TEMPLATE_NAME = "marul otomasyon"
-    const val BLYNK_AUTH_TOKEN = "8Cj2uteylTLTPjiwbkFyCn_0assoU6Nm"
-    const val BLYNK_BASE_URL = "https://blynk.cloud/external/api"
-    const val BLYNK_POLL_INTERVAL_MS = 3000L
+    // MQTT Broker Varsayılanları
+    const val MQTT_DEFAULT_HOST = "192.168.1.100"
+    const val MQTT_DEFAULT_PORT = 1883
 
     // BLE UUIDs
     const val SERVICE_UUID = "0000180A-0000-1000-8000-00805f9b34fb"
@@ -20,20 +17,27 @@ object Constants {
     const val CHAR_MEASUREMENT_PERIOD_UUID = "00000008-0000-1000-8000-00805f9b34fb"
     const val BLE_CCCD_UUID = "00002902-0000-1000-8000-00805f9b34fb"
 
-    // Virtual Pins (Blynk)
-    const val V_PH = 0
-    const val V_EC = 1
-    const val V_TEMP = 2
-    const val V_STATUS = 3
-    const val V_PH_DOWN = 4
-    const val V_GUBRE_A = 5
-    const val V_RESET = 6
-    const val V_FLOW_A = 7
-    const val V_FLOW_B = 8
-    const val V_FLOW_PH = 9
-    const val V_GUBRE_B = 10
-    const val V_TANK_LEVEL = 11
-    const val V_CIRCULATION = 12
+    // MQTT Sensör Konuları — ESP32 yayınlar, Android dinler
+    const val TOPIC_PH        = "marul/sensor/ph"
+    const val TOPIC_EC        = "marul/sensor/ec"
+    const val TOPIC_TEMP      = "marul/sensor/temp"
+    const val TOPIC_TANK      = "marul/sensor/tank"
+    const val TOPIC_FLOW_A    = "marul/sensor/flow_a"
+    const val TOPIC_FLOW_B    = "marul/sensor/flow_b"
+    const val TOPIC_FLOW_PH   = "marul/sensor/flow_ph"
+
+    // MQTT Durum Konuları — ESP32 pompa geri bildirimini yayınlar
+    const val TOPIC_STATUS_PH_DOWN = "marul/status/ph_down"
+    const val TOPIC_STATUS_FERT_A  = "marul/status/fert_a"
+    const val TOPIC_STATUS_FERT_B  = "marul/status/fert_b"
+    const val TOPIC_STATUS_CIRC    = "marul/status/circ"
+
+    // MQTT Kontrol Konuları — Android yayınlar, ESP32 dinler
+    const val TOPIC_CTRL_PH_DOWN = "marul/control/ph_down"
+    const val TOPIC_CTRL_FERT_A  = "marul/control/fert_a"
+    const val TOPIC_CTRL_FERT_B  = "marul/control/fert_b"
+    const val TOPIC_CTRL_CIRC    = "marul/control/circ"
+    const val TOPIC_CTRL_RESET   = "marul/control/reset"
 
     // Default Values
     const val DEFAULT_PH_MAX = 6.2f
@@ -50,5 +54,6 @@ object Constants {
     const val PREF_EC_MIN = "ec_min"
     const val PREF_DOSAGE_TIME = "dosage_time"
     const val PREF_MEASUREMENT_PERIOD = "measurement_period"
-    const val PREF_BLYNK_TOKEN = "blynk_token"
+    const val PREF_MQTT_HOST = "mqtt_host"
+    const val PREF_MQTT_PORT = "mqtt_port"
 }

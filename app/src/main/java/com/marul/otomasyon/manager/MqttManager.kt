@@ -62,6 +62,8 @@ class MqttManager {
                     override fun connectComplete(reconnect: Boolean, serverURI: String) {
                         _connectionState.value = true
                         subscribeAll(mqttClient)
+                        // Yalnızca otomatik yeniden bağlanmada bildir
+                        // (ilk bağlanma aşağıdaki try bloğunda ele alınır)
                         if (reconnect) callback.onConnected()
                     }
 
@@ -78,9 +80,8 @@ class MqttManager {
                 })
 
                 mqttClient.connect(options)
+                // connect() döndükten sonra zaten connectComplete çağrılmıştır
                 client = mqttClient
-                _connectionState.value = true
-                subscribeAll(mqttClient)
                 callback.onConnected()
             } catch (e: Exception) {
                 callback.onError("MQTT bağlantı hatası: ${e.message}")

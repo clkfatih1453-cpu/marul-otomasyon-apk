@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/padding_large">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/title_settings"
+            android:textSize="@dimen/text_size_title"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_large" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="pH Ayarları"
+            android:textSize="@dimen/text_size_large"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_medium" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="@dimen/padding_medium">
+
+            <EditText
+                android:id="@+id/edt_ph_max"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/pref_ph_max"
+                android:inputType="numberDecimal"
+                android:padding="@dimen/padding_medium"
+                android:background="@drawable/rounded_background"
+                android:layout_marginEnd="@dimen/padding_small" />
+
+            <EditText
+                android:id="@+id/edt_ph_min"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/pref_ph_min"
+                android:inputType="numberDecimal"
+                android:padding="@dimen/padding_medium"
+                android:background="@drawable/rounded_background" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EC Ayarları"
+            android:textSize="@dimen/text_size_large"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_medium" />
+
+        <EditText
+            android:id="@+id/edt_ec_min"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/pref_ec_min"
+            android:inputType="numberDecimal"
+            android:layout_marginBottom="@dimen/padding_large"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Zamanlama Ayarları"
+            android:textSize="@dimen/text_size_large"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_medium" />
+
+        <EditText
+            android:id="@+id/edt_dosage_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/pref_dosage_time"
+            android:inputType="number"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <EditText
+            android:id="@+id/edt_measurement_period"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/pref_measurement_period"
+            android:inputType="number"
+            android:layout_marginBottom="@dimen/padding_large"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <Button
+            android:id="@+id/btn_save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_save"
+            android:textSize="@dimen/text_size_medium"
+            android:backgroundTint="@color/success" />
+
+    </LinearLayout>
+</ScrollView>

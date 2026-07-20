@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="@dimen/padding_large"
+    android:background="@color/white">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/title_home"
+        android:textSize="@dimen/text_size_title"
+        android:textStyle="bold"
+        android:textColor="@color/primary"
+        android:layout_marginBottom="@dimen/padding_large" />
+
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/status_offline"
+        android:textSize="@dimen/text_size_medium"
+        android:textColor="@color/error"
+        android:padding="@dimen/padding_medium"
+        android:background="@drawable/rounded_background"
+        android:layout_marginBottom="@dimen/padding_large" />
+
+    <Button
+        android:id="@+id/btn_setup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_setup"
+        android:textSize="@dimen/text_size_medium"
+        android:layout_marginBottom="@dimen/padding_medium"
+        android:backgroundTint="@color/primary" />
+
+    <Button
+        android:id="@+id/btn_control"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_control"
+        android:textSize="@dimen/text_size_medium"
+        android:layout_marginBottom="@dimen/padding_medium"
+        android:backgroundTint="@color/info" />
+
+    <Button
+        android:id="@+id/btn_settings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_settings"
+        android:textSize="@dimen/text_size_medium"
+        android:backgroundTint="@color/warning" />
+
+</LinearLayout>

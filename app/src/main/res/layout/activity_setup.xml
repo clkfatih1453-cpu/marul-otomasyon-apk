@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/padding_large">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/title_setup"
+            android:textSize="@dimen/text_size_title"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_large" />
+
+        <!-- Cihaz Tarama Bölümü -->
+        <Button
+            android:id="@+id/btn_scan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_scan_devices"
+            android:textSize="@dimen/text_size_medium"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:backgroundTint="@color/primary" />
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/padding_medium"
+            style="?android:attr/progressBarStyleHorizontal" />
+
+        <ListView
+            android:id="@+id/device_list"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginBottom="@dimen/padding_large"
+            android:background="@drawable/rounded_background" />
+
+        <Button
+            android:id="@+id/btn_connect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_connect"
+            android:textSize="@dimen/text_size_medium"
+            android:layout_marginBottom="@dimen/padding_large"
+            android:backgroundTint="@color/success" />
+
+        <!-- WiFi Bilgileri -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WiFi Ayarları"
+            android:textSize="@dimen/text_size_large"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_medium" />
+
+        <EditText
+            android:id="@+id/edt_ssid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_ssid"
+            android:inputType="text"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <EditText
+            android:id="@+id/edt_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_password"
+            android:inputType="textPassword"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <!-- pH ve EC Hedef Değerleri -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hedef Değerler"
+            android:textSize="@dimen/text_size_large"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:layout_marginTop="@dimen/padding_medium" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="@dimen/padding_medium">
+
+            <EditText
+                android:id="@+id/edt_ph_max"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="pH Max"
+                android:inputType="numberDecimal"
+                android:padding="@dimen/padding_medium"
+                android:background="@drawable/rounded_background"
+                android:layout_marginEnd="@dimen/padding_small" />
+
+            <EditText
+                android:id="@+id/edt_ph_min"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="pH Min"
+                android:inputType="numberDecimal"
+                android:padding="@dimen/padding_medium"
+                android:background="@drawable/rounded_background" />
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/edt_ec_min"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="EC Minimum"
+            android:inputType="numberDecimal"
+            android:layout_marginBottom="@dimen/padding_large"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Hazır"
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/success"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background"
+            android:layout_marginBottom="@dimen/padding_medium" />
+
+        <Button
+            android:id="@+id/btn_send_wifi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_send_wifi"
+            android:textSize="@dimen/text_size_medium"
+            android:backgroundTint="@color/success" />
+
+    </LinearLayout>
+</ScrollView>

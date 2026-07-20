@@ -1,5 +1,6 @@
 ﻿package com.marul.otomasyon.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ProgressBar
@@ -129,6 +130,14 @@ class ControlActivity : AppCompatActivity() {
     private fun connectToMqtt() {
         val host = settingsManager.getMqttHost()
         val port = settingsManager.getMqttPort()
+
+        // Broker ayarlanmadıysa Ayarlar ekranına yönlendir
+        if (host == Constants.MQTT_DEFAULT_HOST || host.isBlank()) {
+            Toast.makeText(this, "Lütfen MQTT broker IP'sini Ayarlar'dan girin", Toast.LENGTH_LONG).show()
+            startActivity(Intent(this, SettingsActivity::class.java))
+            return
+        }
+
         mqttManager.connect(host, port, object : MqttCallback {
             override fun onConnected() {
                 runOnUiThread {
@@ -183,6 +192,14 @@ class ControlActivity : AppCompatActivity() {
                 sensorDataManager.setPumpStatus(circulation = payload == "1")
                 isUpdatingFromData = false
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Ayarlar ekranından dönüldüğünde bağlantıyı yenile
+        if (!mqttManager.isConnected()) {
+            connectToMqtt()
         }
     }
 

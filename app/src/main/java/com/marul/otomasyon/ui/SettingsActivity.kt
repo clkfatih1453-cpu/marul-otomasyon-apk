@@ -11,6 +11,8 @@ import com.marul.otomasyon.util.Constants
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var settingsManager: SettingsManager
+    private lateinit var edtMqttHost: EditText
+    private lateinit var edtMqttPort: EditText
     private lateinit var edtPhMax: EditText
     private lateinit var edtPhMin: EditText
     private lateinit var edtEcMin: EditText
@@ -27,6 +29,8 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
+        edtMqttHost = findViewById(R.id.edt_mqtt_host)
+        edtMqttPort = findViewById(R.id.edt_mqtt_port)
         edtPhMax = findViewById(R.id.edt_ph_max)
         edtPhMin = findViewById(R.id.edt_ph_min)
         edtEcMin = findViewById(R.id.edt_ec_min)
@@ -40,6 +44,8 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun loadSettings() {
+        edtMqttHost.setText(settingsManager.getMqttHost())
+        edtMqttPort.setText(settingsManager.getMqttPort().toString())
         val config = settingsManager.getWifiConfig()
         edtPhMax.setText(config.phMax.toString())
         edtPhMin.setText(config.phMin.toString())
@@ -50,17 +56,25 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveSettings() {
         try {
+            val host = edtMqttHost.text.toString().trim()
+            val port = edtMqttPort.text.toString().toIntOrNull() ?: Constants.MQTT_DEFAULT_PORT
             val phMax = edtPhMax.text.toString().toFloat()
             val phMin = edtPhMin.text.toString().toFloat()
             val ecMin = edtEcMin.text.toString().toFloat()
             val dosageTime = edtDosageTime.text.toString().toLong()
             val measurementPeriod = edtMeasurementPeriod.text.toString().toLong()
 
+            if (host.isBlank()) {
+                Toast.makeText(this, "Broker IP boş olamaz", Toast.LENGTH_SHORT).show()
+                return
+            }
             if (phMax <= phMin) {
                 Toast.makeText(this, "pH Max, pH Min'den büyük olmalıdır", Toast.LENGTH_SHORT).show()
                 return
             }
 
+            settingsManager.saveMqttHost(host)
+            settingsManager.saveMqttPort(port)
             settingsManager.updatePhMax(phMax)
             settingsManager.updatePhMin(phMin)
             settingsManager.updateEcMin(ecMin)
@@ -68,6 +82,7 @@ class SettingsActivity : AppCompatActivity() {
             settingsManager.updateMeasurementPeriod(measurementPeriod)
 
             Toast.makeText(this, getString(R.string.msg_saved), Toast.LENGTH_SHORT).show()
+            finish()
         } catch (e: Exception) {
             Toast.makeText(this, "Geçersiz giriş: ${e.message}", Toast.LENGTH_SHORT).show()
         }

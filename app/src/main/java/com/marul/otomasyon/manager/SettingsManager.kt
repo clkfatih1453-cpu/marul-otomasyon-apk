@@ -33,12 +33,20 @@ class SettingsManager(context: Context) {
         )
     }
 
-    fun saveBlynkToken(token: String) {
-        preferences.edit().putString(Constants.PREF_BLYNK_TOKEN, token).apply()
+    fun saveMqttHost(host: String) {
+        preferences.edit().putString(Constants.PREF_MQTT_HOST, host).apply()
     }
 
-    fun getBlynkToken(): String {
-        return preferences.getString(Constants.PREF_BLYNK_TOKEN, Constants.BLYNK_AUTH_TOKEN) ?: Constants.BLYNK_AUTH_TOKEN
+    fun getMqttHost(): String {
+        return preferences.getString(Constants.PREF_MQTT_HOST, Constants.MQTT_DEFAULT_HOST) ?: Constants.MQTT_DEFAULT_HOST
+    }
+
+    fun saveMqttPort(port: Int) {
+        preferences.edit().putInt(Constants.PREF_MQTT_PORT, port).apply()
+    }
+
+    fun getMqttPort(): Int {
+        return preferences.getInt(Constants.PREF_MQTT_PORT, Constants.MQTT_DEFAULT_PORT)
     }
 
     fun updatePhMax(value: Float) {

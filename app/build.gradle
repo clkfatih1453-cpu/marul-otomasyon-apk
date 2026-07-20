@@ -54,7 +54,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
 
-    // Blynk IoT - HTTP tabanlı iletişim için OkHttp kullanılır
+    // Blynk IoT - Artık kullanılmıyor; MQTT ile değiştirildi
     // implementation 'com.github.blynkkk:blynk-library-java:0.6.0'
 
     // Bluetooth - Android standart API kullanılır (androidx.bluetooth gerekmez)
@@ -64,8 +64,11 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 
-    // Networking
-    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    // MQTT — Eclipse Paho (kendi Mosquitto sunucusu ile)
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
+
+    // Networking - OkHttp artık gerekli değil ama kaldırılabilir
+    // implementation 'com.squareup.okhttp3:okhttp:4.11.0'
     implementation 'com.google.code.gson:gson:2.10.1'
 
     // Charts - aktif kullanım olmadığında devre dışı

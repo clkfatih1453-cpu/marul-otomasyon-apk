@@ -1,7 +1,7 @@
-# Blynk
--keep class com.blynk.** { *; }
--keepclassmembers class com.blynk.** { *; }
--dontwarn com.blynk.**
+# Eclipse Paho MQTT
+-keep class org.eclipse.paho.** { *; }
+-keepclassmembers class org.eclipse.paho.** { *; }
+-dontwarn org.eclipse.paho.**
 
 # Kotlin
 -keep class kotlin.** { *; }
@@ -17,10 +17,10 @@
 -keep class com.marul.otomasyon.** { *; }
 -keepclassmembers class com.marul.otomasyon.** { *; }
 
-# OkHttp
--dontwarn okhttp3.**
--dontwarn okio.**
--keep class okhttp3.** { *; }
+# OkHttp (kullanılmıyor, kaldırıldı)
+# -dontwarn okhttp3.**
+# -dontwarn okio.**
+# -keep class okhttp3.** { *; }
 
 # MPAndroidChart
 -keep class com.github.mikephil.charting.** { *; }

@@ -17,6 +17,7 @@ proguard_project.txt
 .idea/
 *.iml
 *.apk
+!apk-builds/*.apk
 *.ap_
 *.dex
 *.class

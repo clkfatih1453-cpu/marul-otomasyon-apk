@@ -1,15 +1,15 @@
 package com.marul.otomasyon.ui
 
+import android.app.Activity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import com.marul.otomasyon.R
 import com.marul.otomasyon.manager.SettingsManager
 import com.marul.otomasyon.util.Constants
 
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : Activity() {
     private lateinit var settingsManager: SettingsManager
     private lateinit var edtPhMax: EditText
     private lateinit var edtPhMin: EditText

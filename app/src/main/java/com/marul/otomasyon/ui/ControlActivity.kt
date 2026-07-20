@@ -1,21 +1,24 @@
 package com.marul.otomasyon.ui
 
+import android.app.Activity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.marul.otomasyon.R
 import com.marul.otomasyon.manager.BlynkManager
 import com.marul.otomasyon.manager.SensorDataManager
 import com.marul.otomasyon.manager.SettingsManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
-class ControlActivity : AppCompatActivity() {
+class ControlActivity : Activity() {
     private lateinit var sensorDataManager: SensorDataManager
     private lateinit var blynkManager: BlynkManager
     private lateinit var settingsManager: SettingsManager
@@ -30,6 +33,7 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var switchFertilizerA: Switch
     private lateinit var switchFertilizerB: Switch
     private lateinit var switchCirculation: Switch
+    private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,22 +85,26 @@ class ControlActivity : AppCompatActivity() {
     }
 
     private fun setupObservers() {
-        lifecycleScope.launch {
+        activityScope.launch {
             sensorDataManager.sensorData.collect { data ->
-                txtPhValue.text = "pH: ${String.format("%.1f", data.ph)}"
-                txtEcValue.text = "EC: ${String.format("%.1f", data.ec)}"
-                txtTempValue.text = "${String.format("%.1f", data.temperature)}°C"
-                txtTankLevel.text = "${data.tankLevel}%"
-                progressTank.progress = data.tankLevel
+                runOnUiThread {
+                    txtPhValue.text = "pH: ${String.format("%.1f", data.ph)}"
+                    txtEcValue.text = "EC: ${String.format("%.1f", data.ec)}"
+                    txtTempValue.text = "${String.format("%.1f", data.temperature)}°C"
+                    txtTankLevel.text = "${data.tankLevel}%"
+                    progressTank.progress = data.tankLevel
+                }
             }
         }
 
-        lifecycleScope.launch {
+        activityScope.launch {
             sensorDataManager.pumpStatus.collect { status ->
-                switchPhDown.isChecked = status.phDownRunning
-                switchFertilizerA.isChecked = status.fertilizerARunning
-                switchFertilizerB.isChecked = status.fertilizerBRunning
-                switchCirculation.isChecked = status.circulationRunning
+                runOnUiThread {
+                    switchPhDown.isChecked = status.phDownRunning
+                    switchFertilizerA.isChecked = status.fertilizerARunning
+                    switchFertilizerB.isChecked = status.fertilizerBRunning
+                    switchCirculation.isChecked = status.circulationRunning
+                }
             }
         }
     }
@@ -133,6 +141,7 @@ class ControlActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        activityScope.cancel()
         blynkManager.disconnect()
     }
 }

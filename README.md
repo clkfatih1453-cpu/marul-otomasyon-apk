@@ -1,6 +1,41 @@
 # Marul Otomasyon APK
 
+[![Build and Release APK](https://github.com/clkfatih1453-cpu/marul-otomasyon-apk/actions/workflows/build-release-apk.yml/badge.svg?branch=main)](https://github.com/clkfatih1453-cpu/marul-otomasyon-apk/actions/workflows/build-release-apk.yml)
+
 ESP32 tabanlı hidroponik sistem için Android uygulaması. Bluetooth (BLE) ve WiFi üzerinden sistem kontrolü sağlar.
+
+## Hazır APK İndir
+
+- **GitHub Releases:** https://github.com/clkfatih1453-cpu/marul-otomasyon-apk/releases
+- **Debug APK (direkt):** https://github.com/clkfatih1453-cpu/marul-otomasyon-apk/releases/latest/download/marul-otomasyon-debug.apk
+- **Release APK (direkt):** https://github.com/clkfatih1453-cpu/marul-otomasyon-apk/releases/latest/download/marul-otomasyon-release.apk
+
+Repoda da hazır kopyalar bulunur:
+
+- `/apk-builds/marul-otomasyon-debug.apk`
+- `/apk-builds/marul-otomasyon-release.apk`
+
+## Telefonda Hızlı Kurulum
+
+1. Telefonunda **Chrome** veya başka bir tarayıcı aç.
+2. Şu direkt linklerden birine dokun:
+   - Test için: `marul-otomasyon-debug.apk`
+   - Normal kullanım için: `marul-otomasyon-release.apk`
+3. İndirme tamamlanınca **Dosyalar / İndirilenler** klasörünü aç.
+4. APK dosyasına dokun.
+5. Gerekirse **Bilinmeyen uygulama yükleme izni ver** seçeneğini aç.
+6. **Yükle** düğmesine bas.
+7. Kurulum bitince uygulamayı aç.
+
+## QR Kod ile İndirme
+
+Telefon kullanıcıları için en kolay yöntemlerden biri direkt indirme linkini QR koda çevirmektir:
+
+1. Yukarıdaki direkt indirme linklerinden birini kopyala.
+2. Herhangi bir QR üreticiye yapıştır.
+3. QR kodu telefondan tara.
+4. Açılan sayfada APK dosyasını indir.
+5. İndirilen APK'yı yükle.
 
 ## Özellikler
 

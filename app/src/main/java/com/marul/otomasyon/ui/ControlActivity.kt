@@ -1,4 +1,4 @@
-﻿package com.marul.otomasyon.ui
+package com.marul.otomasyon.ui
 
 import android.app.AlertDialog
 import android.app.TimePickerDialog

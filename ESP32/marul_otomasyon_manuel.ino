@@ -128,6 +128,15 @@ bool lightOn     = false;
 
 // Zamanlama
 unsigned long lastSensorPublish = 0;
+const float MANUAL_ML_PER_SEC_A = 1.0f;
+const float MANUAL_ML_PER_SEC_B = 1.0f;
+const float MANUAL_ML_PER_SEC_ACID = 1.0f;
+bool fertAManualRunning = false;
+bool fertBManualRunning = false;
+bool acidManualRunning = false;
+unsigned long fertAManualStartMs = 0;
+unsigned long fertBManualStartMs = 0;
+unsigned long acidManualStartMs = 0;
 
 // ============================================================
 //  pH Kalibrasyon
@@ -219,6 +228,43 @@ void doseML(int pin, float ml, float& counter, const char* statusTopic) {
     prefs.end();
 }
 
+void setManualDoseState(
+    bool on,
+    bool& running,
+    unsigned long& startMs,
+    int pin,
+    float mlPerSec,
+    float& totalCounter,
+    const char* totalPrefKey,
+    const char* statusTopic,
+    const char* totalTopic
+) {
+    if (on) {
+        if (!running) {
+            running = true;
+            startMs = millis();
+            digitalWrite(pin, RELAY_ON);
+            mqtt.publish(statusTopic, "1");
+        }
+        return;
+    }
+
+    if (running) {
+        float givenMl = ((millis() - startMs) / 1000.0f) * mlPerSec;
+        if (givenMl < 0) givenMl = 0;
+        totalCounter += givenMl;
+        prefs.begin("marul", false);
+        prefs.putFloat(totalPrefKey, totalCounter);
+        prefs.end();
+        char totalBuf[16];
+        snprintf(totalBuf, sizeof(totalBuf), "%.1f", totalCounter);
+        mqtt.publish(totalTopic, totalBuf);
+    }
+    running = false;
+    digitalWrite(pin, RELAY_OFF);
+    mqtt.publish(statusTopic, "0");
+}
+
 // ============================================================
 //  MQTT Mesaj Callback
 // ============================================================
@@ -247,19 +293,43 @@ void onMqttMessage(char* topic, byte* payload, unsigned int len) {
         mqtt.publish(T_STATUS_CIRC, on ? "1" : "0");
     }
     else if (t == T_CTRL_FERT_A) {
-        bool on = (msg == "1");
-        digitalWrite(PIN_PUMP_DOSE_A, on ? RELAY_ON : RELAY_OFF);
-        mqtt.publish(T_STATUS_FERT_A, on ? "1" : "0");
+        setManualDoseState(
+            msg == "1",
+            fertAManualRunning,
+            fertAManualStartMs,
+            PIN_PUMP_DOSE_A,
+            MANUAL_ML_PER_SEC_A,
+            fertAMlTotal,
+            "fert_a",
+            T_STATUS_FERT_A,
+            T_SENSOR_FERT_A
+        );
     }
     else if (t == T_CTRL_FERT_B) {
-        bool on = (msg == "1");
-        digitalWrite(PIN_PUMP_DOSE_B, on ? RELAY_ON : RELAY_OFF);
-        mqtt.publish(T_STATUS_FERT_B, on ? "1" : "0");
+        setManualDoseState(
+            msg == "1",
+            fertBManualRunning,
+            fertBManualStartMs,
+            PIN_PUMP_DOSE_B,
+            MANUAL_ML_PER_SEC_B,
+            fertBMlTotal,
+            "fert_b",
+            T_STATUS_FERT_B,
+            T_SENSOR_FERT_B
+        );
     }
     else if (t == T_CTRL_PH_DOWN) {
-        bool on = (msg == "1");
-        digitalWrite(PIN_PUMP_ACID, on ? RELAY_ON : RELAY_OFF);
-        mqtt.publish(T_STATUS_ACID, on ? "1" : "0");
+        setManualDoseState(
+            msg == "1",
+            acidManualRunning,
+            acidManualStartMs,
+            PIN_PUMP_ACID,
+            MANUAL_ML_PER_SEC_ACID,
+            acidMlTotal,
+            "acid",
+            T_STATUS_ACID,
+            T_SENSOR_ACID
+        );
     }
     // ── Zamanlama ──
     else if (t == T_CTRL_PUMP_TMR) {

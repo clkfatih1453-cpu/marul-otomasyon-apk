@@ -49,6 +49,38 @@ class SettingsManager(context: Context) {
         return preferences.getInt(Constants.PREF_MQTT_PORT, Constants.MQTT_DEFAULT_PORT)
     }
 
+    fun saveMqttBrokerId(value: String) {
+        preferences.edit().putString(Constants.PREF_MQTT_BROKER_ID, value).apply()
+    }
+
+    fun getMqttBrokerId(): String {
+        return preferences.getString(Constants.PREF_MQTT_BROKER_ID, "") ?: ""
+    }
+
+    fun saveMqttProvider(value: String) {
+        preferences.edit().putString(Constants.PREF_MQTT_PROVIDER, value).apply()
+    }
+
+    fun getMqttProvider(): String {
+        return preferences.getString(Constants.PREF_MQTT_PROVIDER, "") ?: ""
+    }
+
+    fun saveMqttUrl(value: String) {
+        preferences.edit().putString(Constants.PREF_MQTT_URL, value).apply()
+    }
+
+    fun getMqttUrl(): String {
+        return preferences.getString(Constants.PREF_MQTT_URL, "") ?: ""
+    }
+
+    fun saveMqttWsUrl(value: String) {
+        preferences.edit().putString(Constants.PREF_MQTT_WS_URL, value).apply()
+    }
+
+    fun getMqttWsUrl(): String {
+        return preferences.getString(Constants.PREF_MQTT_WS_URL, "") ?: ""
+    }
+
     fun updatePhMax(value: Float) {
         preferences.edit().putFloat(Constants.PREF_PH_MAX, value).apply()
     }

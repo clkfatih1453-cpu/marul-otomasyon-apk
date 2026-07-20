@@ -67,6 +67,10 @@ object Constants {
     const val PREF_MEASUREMENT_PERIOD = "measurement_period"
     const val PREF_MQTT_HOST = "mqtt_host"
     const val PREF_MQTT_PORT = "mqtt_port"
+    const val PREF_MQTT_BROKER_ID = "mqtt_broker_id"
+    const val PREF_MQTT_PROVIDER = "mqtt_provider"
+    const val PREF_MQTT_URL = "mqtt_url"
+    const val PREF_MQTT_WS_URL = "mqtt_ws_url"
     const val PREF_PUMP_TIMER = "pump_timer"
     const val PREF_LIGHT_TIMER = "light_timer"
 }

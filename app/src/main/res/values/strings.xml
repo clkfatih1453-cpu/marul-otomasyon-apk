@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Marul Otomasyon</string>
+
+    <!-- Ana Ekran -->
+    <string name="title_home">Ana Paneli</string>
+    <string name="btn_setup">Kurulum</string>
+    <string name="btn_control">Kontrol Paneli</string>
+    <string name="btn_settings">Ayarlar</string>
+    <string name="status_offline">Çevrimdışı</string>
+    <string name="status_online">Bağlı</string>
+
+    <!-- Kurulum Ekranı -->
+    <string name="title_setup">Bluetooth Kurulumu</string>
+    <string name="hint_ssid">WiFi Ağ Adı (SSID)</string>
+    <string name="hint_password">WiFi Şifresi</string>
+    <string name="btn_scan_devices">Cihazları Tara</string>
+    <string name="btn_connect">Bağlan</string>
+    <string name="btn_send_wifi">WiFi Gönder</string>
+    <string name="msg_scanning">Taranıyor...</string>
+    <string name="msg_connected">Bağlı</string>
+    <string name="msg_disconnected">Bağlantı Kesildi</string>
+
+    <!-- Kontrol Paneli -->
+    <string name="title_control">Kontrol Paneli</string>
+    <string name="label_ph">pH Değeri</string>
+    <string name="label_ec">EC Değeri</string>
+    <string name="label_temp">Sıcaklık</string>
+    <string name="label_tank_level">Depo Seviyesi</string>
+    <string name="label_ph_down">pH Düşür</string>
+    <string name="label_fertilizer_a">Gübre A</string>
+    <string name="label_fertilizer_b">Gübre B</string>
+    <string name="label_circulation">Sirkulasyon</string>
+    <string name="btn_on">AÇ</string>
+    <string name="btn_off">KAPAT</string>
+    <string name="btn_reset">SİFIRLA</string>
+
+    <!-- Ayarlar -->
+    <string name="title_settings">Ayarlar</string>
+    <string name="pref_ph_max">pH Maksimum</string>
+    <string name="pref_ph_min">pH Minimum</string>
+    <string name="pref_ec_min">EC Minimum</string>
+    <string name="pref_dosage_time">Dozaj Süresi (ms)</string>
+    <string name="pref_measurement_period">Ölçüm Periyodu (ms)</string>
+    <string name="btn_save">Kaydet</string>
+    <string name="msg_saved">Kaydedildi</string>
+
+    <!-- Hatalar -->
+    <string name="error_bluetooth_not_available">Bluetooth Mevcut Değil</string>
+    <string name="error_permission_denied">İzin Reddedildi</string>
+    <string name="error_connection_failed">Bağlantı Başarısız</string>
+    <string name="error_invalid_wifi">Geçersiz WiFi Bilgisi</string>
+</resources>

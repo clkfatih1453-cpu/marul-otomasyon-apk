@@ -1,5 +1,6 @@
 package com.marul.otomasyon.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -40,6 +41,10 @@ class SettingsActivity : AppCompatActivity() {
         val btnSave = findViewById<Button>(R.id.btn_save)
         btnSave.setOnClickListener {
             saveSettings()
+        }
+
+        findViewById<Button>(R.id.btn_esp32_config).setOnClickListener {
+            startActivity(Intent(this, BtProvisionActivity::class.java))
         }
     }
 

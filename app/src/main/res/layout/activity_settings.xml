@@ -134,6 +134,15 @@
             android:background="@drawable/rounded_background" />
 
         <Button
+            android:id="@+id/btn_esp32_config"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🔵  ESP32 Bluetooth Yapılandır"
+            android:textSize="14sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginBottom="@dimen/padding_medium" />
+
+        <Button
             android:id="@+id/btn_save"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -33,7 +33,7 @@ class SensorDataManager {
     }
 
     fun updateFertilizerAFlowRate(value: Float) {
-        _sensorData.value = _sensorData.value.copy(fertiilizerAFlowRate = value)
+        _sensorData.value = _sensorData.value.copy(fertilizerAFlowRate = value)
     }
 
     fun updateFertilizerBFlowRate(value: Float) {

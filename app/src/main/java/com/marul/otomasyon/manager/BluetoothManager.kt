@@ -143,13 +143,23 @@ class BluetoothManager(private val context: Context) {
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             super.onServicesDiscovered(gatt, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                gatt?.let {
-                    val service = it.getService(UUID.fromString(Constants.SERVICE_UUID))
-                    service?.let {
-                        val characteristic = it.getCharacteristic(UUID.fromString(Constants.CHAR_DATA_UUID))
-                        characteristic?.let {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                gatt.readCharacteristic(it)
+                gatt?.let { g ->
+                    val service = g.getService(UUID.fromString(Constants.SERVICE_UUID))
+                    service?.let { svc ->
+                        val characteristic = svc.getCharacteristic(UUID.fromString(Constants.CHAR_DATA_UUID))
+                        characteristic?.let { char ->
+                            // Notification'ı etkinleştir
+                            g.setCharacteristicNotification(char, true)
+                            val descriptor = char.getDescriptor(UUID.fromString(Constants.BLE_CCCD_UUID))
+                            descriptor?.let { desc ->
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    g.writeDescriptor(desc, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    desc.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                                    @Suppress("DEPRECATION")
+                                    g.writeDescriptor(desc)
+                                }
                             }
                         }
                     }
@@ -194,6 +204,28 @@ class BluetoothManager(private val context: Context) {
             super.onCharacteristicWrite(gatt, characteristic, status)
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 callback?.onError("Write failed: $status")
+            }
+        }
+
+        // API 33+ BLE notification callback
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
+            super.onCharacteristicChanged(gatt, characteristic, value)
+            callback?.onDataReceived(String(value, Charsets.UTF_8))
+        }
+
+        // Legacy BLE notification callback (API < 33)
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?
+        ) {
+            @Suppress("DEPRECATION")
+            characteristic?.value?.let {
+                callback?.onDataReceived(String(it, Charsets.UTF_8))
             }
         }
     }

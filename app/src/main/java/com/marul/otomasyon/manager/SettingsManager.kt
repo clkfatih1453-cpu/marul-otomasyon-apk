@@ -69,6 +69,18 @@ class SettingsManager(context: Context) {
         preferences.edit().putLong(Constants.PREF_MEASUREMENT_PERIOD, value).apply()
     }
 
+    fun saveTimer(key: String, value: String) {
+        preferences.edit().putString(key, value).apply()
+    }
+
+    fun getPumpTimer(): String {
+        return preferences.getString(Constants.PREF_PUMP_TIMER, "00:00 - 24:00") ?: "00:00 - 24:00"
+    }
+
+    fun getLightTimer(): String {
+        return preferences.getString(Constants.PREF_LIGHT_TIMER, "06:00 - 22:00") ?: "06:00 - 22:00"
+    }
+
     fun clearAll() {
         preferences.edit().clear().apply()
     }

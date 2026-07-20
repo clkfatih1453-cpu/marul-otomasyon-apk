@@ -1,8 +1,14 @@
 ﻿package com.marul.otomasyon.ui
 
+import android.app.AlertDialog
+import android.app.TimePickerDialog
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
+import android.text.InputType
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
@@ -25,104 +31,192 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var txtPhValue: TextView
     private lateinit var txtEcValue: TextView
     private lateinit var txtTempValue: TextView
+    private lateinit var txtHumidity: TextView
+    private lateinit var txtWaterTemp: TextView
     private lateinit var txtTankLevel: TextView
     private lateinit var progressTank: ProgressBar
-
+    private lateinit var txtWaterAdded: TextView
+    private lateinit var txtFertAMl: TextView
+    private lateinit var txtFertBMl: TextView
+    private lateinit var txtAcidMl: TextView
+    private lateinit var txtWaterAddedTotal: TextView
+    private lateinit var btnDoseFertA: Button
+    private lateinit var btnDoseFertB: Button
+    private lateinit var btnDoseAcid: Button
+    private lateinit var txtDoseFertA: TextView
+    private lateinit var txtDoseFertB: TextView
+    private lateinit var txtDoseAcid: TextView
     private lateinit var switchPhDown: Switch
     private lateinit var switchFertilizerA: Switch
     private lateinit var switchFertilizerB: Switch
     private lateinit var switchCirculation: Switch
+    private lateinit var btnPumpTimer: Button
+    private lateinit var txtPumpTimer: TextView
+    private lateinit var btnLightTimer: Button
+    private lateinit var txtLightTimer: TextView
 
     private var isUpdatingFromData = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_control)
-
         sensorDataManager = SensorDataManager()
         settingsManager = SettingsManager(this)
         mqttManager = MqttManager()
-
         setupUI()
         setupObservers()
         connectToMqtt()
     }
 
     private fun setupUI() {
-        txtPhValue = findViewById(R.id.txt_ph_value)
-        txtEcValue = findViewById(R.id.txt_ec_value)
-        txtTempValue = findViewById(R.id.txt_temp_value)
-        txtTankLevel = findViewById(R.id.txt_tank_level)
-        progressTank = findViewById(R.id.progress_tank)
+        txtPhValue         = findViewById(R.id.txt_ph_value)
+        txtEcValue         = findViewById(R.id.txt_ec_value)
+        txtTempValue       = findViewById(R.id.txt_temp_value)
+        txtHumidity        = findViewById(R.id.txt_humidity)
+        txtWaterTemp       = findViewById(R.id.txt_water_temp)
+        txtTankLevel       = findViewById(R.id.txt_tank_level)
+        progressTank       = findViewById(R.id.progress_tank)
+        txtWaterAdded      = findViewById(R.id.txt_water_added)
+        txtFertAMl         = findViewById(R.id.txt_fert_a_ml)
+        txtFertBMl         = findViewById(R.id.txt_fert_b_ml)
+        txtAcidMl          = findViewById(R.id.txt_acid_ml)
+        txtWaterAddedTotal = findViewById(R.id.txt_water_added_total)
+        btnDoseFertA       = findViewById(R.id.btn_dose_fert_a)
+        btnDoseFertB       = findViewById(R.id.btn_dose_fert_b)
+        btnDoseAcid        = findViewById(R.id.btn_dose_acid)
+        txtDoseFertA       = findViewById(R.id.txt_dose_fert_a)
+        txtDoseFertB       = findViewById(R.id.txt_dose_fert_b)
+        txtDoseAcid        = findViewById(R.id.txt_dose_acid)
+        switchPhDown       = findViewById(R.id.switch_ph_down)
+        switchFertilizerA  = findViewById(R.id.switch_fertilizer_a)
+        switchFertilizerB  = findViewById(R.id.switch_fertilizer_b)
+        switchCirculation  = findViewById(R.id.switch_circulation)
+        btnPumpTimer       = findViewById(R.id.btn_pump_timer)
+        txtPumpTimer       = findViewById(R.id.txt_pump_timer)
+        btnLightTimer      = findViewById(R.id.btn_light_timer)
+        txtLightTimer      = findViewById(R.id.txt_light_timer)
 
-        switchPhDown = findViewById(R.id.switch_ph_down)
-        switchFertilizerA = findViewById(R.id.switch_fertilizer_a)
-        switchFertilizerB = findViewById(R.id.switch_fertilizer_b)
-        switchCirculation = findViewById(R.id.switch_circulation)
+        txtPumpTimer.text = settingsManager.getPumpTimer()
+        txtLightTimer.text = settingsManager.getLightTimer()
+
+        switchPhDown.setOnCheckedChangeListener { _, c ->
+            if (!isUpdatingFromData) { sensorDataManager.setPumpStatus(phDown = c); mqttManager.publish(Constants.TOPIC_CTRL_PH_DOWN, if (c) "1" else "0") }
+        }
+        switchFertilizerA.setOnCheckedChangeListener { _, c ->
+            if (!isUpdatingFromData) { sensorDataManager.setPumpStatus(fertilizerA = c); mqttManager.publish(Constants.TOPIC_CTRL_FERT_A, if (c) "1" else "0") }
+        }
+        switchFertilizerB.setOnCheckedChangeListener { _, c ->
+            if (!isUpdatingFromData) { sensorDataManager.setPumpStatus(fertilizerB = c); mqttManager.publish(Constants.TOPIC_CTRL_FERT_B, if (c) "1" else "0") }
+        }
+        switchCirculation.setOnCheckedChangeListener { _, c ->
+            if (!isUpdatingFromData) { sensorDataManager.setPumpStatus(circulation = c); mqttManager.publish(Constants.TOPIC_CTRL_CIRC, if (c) "1" else "0") }
+        }
+
+        btnDoseFertA.setOnClickListener { showDoseDialog("Gubre A", Constants.TOPIC_CTRL_DOSE_A, txtDoseFertA) }
+        btnDoseFertB.setOnClickListener { showDoseDialog("Gubre B", Constants.TOPIC_CTRL_DOSE_B, txtDoseFertB) }
+        btnDoseAcid.setOnClickListener  { showDoseDialog("Asit", Constants.TOPIC_CTRL_DOSE_ACID, txtDoseAcid) }
+
+        btnPumpTimer.setOnClickListener  { showTimerDialog("Devirdaim Pompasi", Constants.TOPIC_CTRL_PUMP_TMR, txtPumpTimer, Constants.PREF_PUMP_TIMER) }
+        btnLightTimer.setOnClickListener { showTimerDialog("Spektrum Isik", Constants.TOPIC_CTRL_LIGHT_TMR, txtLightTimer, Constants.PREF_LIGHT_TIMER) }
 
         val btnReset = findViewById<Button>(R.id.btn_reset)
-
-        switchPhDown.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingFromData) {
-                sensorDataManager.setPumpStatus(phDown = isChecked)
-                mqttManager.publish(Constants.TOPIC_CTRL_PH_DOWN, if (isChecked) "1" else "0")
-            }
-        }
-
-        switchFertilizerA.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingFromData) {
-                sensorDataManager.setPumpStatus(fertilizerA = isChecked)
-                mqttManager.publish(Constants.TOPIC_CTRL_FERT_A, if (isChecked) "1" else "0")
-            }
-        }
-
-        switchFertilizerB.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingFromData) {
-                sensorDataManager.setPumpStatus(fertilizerB = isChecked)
-                mqttManager.publish(Constants.TOPIC_CTRL_FERT_B, if (isChecked) "1" else "0")
-            }
-        }
-
-        switchCirculation.setOnCheckedChangeListener { _, isChecked ->
-            if (!isUpdatingFromData) {
-                sensorDataManager.setPumpStatus(circulation = isChecked)
-                mqttManager.publish(Constants.TOPIC_CTRL_CIRC, if (isChecked) "1" else "0")
-            }
-        }
-
         btnReset.setOnClickListener {
-            sensorDataManager.reset()
-            mqttManager.publish(Constants.TOPIC_CTRL_RESET, "1")
-            Toast.makeText(this, "Sistem sifirlandirildi", Toast.LENGTH_SHORT).show()
+            AlertDialog.Builder(this)
+                .setTitle("Sistemi Sifirla")
+                .setMessage("ESP32 yeniden baslatilacak. Emin misiniz?")
+                .setPositiveButton("Evet") { _, _ ->
+                    sensorDataManager.reset()
+                    mqttManager.publish(Constants.TOPIC_CTRL_RESET, "1")
+                    Toast.makeText(this, "Sistem sifirlaniyor...", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Iptal", null).show()
         }
+    }
+
+    private fun showDoseDialog(name: String, topic: String, label: TextView) {
+        val input = EditText(this).apply {
+            hint = "ml (orn: 50)"
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setPadding(40, 20, 40, 20)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(name + " Dozaji")
+            .setMessage("Verilecek miktar (ml):")
+            .setView(input)
+            .setPositiveButton("Gonder") { _, _ ->
+                val ml = input.text.toString().trim()
+                if (ml.isNotEmpty() && ml.toFloatOrNull() != null) {
+                    mqttManager.publish(topic, ml)
+                    label.text = "Son: " + ml + " ml"
+                    Toast.makeText(this, name + ": " + ml + " ml gonderildi", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Gecersiz miktar", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Iptal", null).show()
+    }
+
+    private fun showTimerDialog(name: String, topic: String, label: TextView, prefKey: String) {
+        var sh = 0; var sm = 0
+        TimePickerDialog(this, { _, h, m ->
+            sh = h; sm = m
+            TimePickerDialog(this, { _, eh, em ->
+                val timer = "%02d:%02d - %02d:%02d".format(sh, sm, eh, em)
+                label.text = timer
+                mqttManager.publish(topic, timer)
+                settingsManager.saveTimer(prefKey, timer)
+                Toast.makeText(this, name + " zamanlama: " + timer, Toast.LENGTH_SHORT).show()
+            }, 22, 0, true).apply { setTitle(name + " - Bitis Saati") }.show()
+        }, 6, 0, true).apply { setTitle(name + " - Baslangic Saati") }.show()
     }
 
     private fun setupObservers() {
         lifecycleScope.launch {
-            sensorDataManager.sensorData.collect { data ->
-                txtPhValue.text = "pH: ${String.format("%.1f", data.ph)}"
-                txtEcValue.text = "EC: ${String.format("%.1f", data.ec)}"
-                txtTempValue.text = "${String.format("%.1f", data.temperature)}C"
-                txtTankLevel.text = "${data.tankLevel}%"
-                progressTank.progress = data.tankLevel
+            sensorDataManager.sensorData.collect { d ->
+                txtPhValue.text   = "%.1f".format(d.ph)
+                txtEcValue.text   = "%.2f".format(d.ec)
+                txtTempValue.text = "%.1f\u00b0C".format(d.temperature)
+                txtHumidity.text  = "%.0f%%".format(d.humidity)
+                txtWaterTemp.text = "%.1f\u00b0C".format(d.waterTemperature)
+                txtTankLevel.text = d.tankLevel.toString() + "%"
+                progressTank.progress = d.tankLevel
+                txtWaterAdded.text = "Eklenen su: %.1f L".format(d.waterAddedLiters)
+
+                val tankColor = when {
+                    d.tankLevel > 60 -> Color.parseColor("#4CAF50")
+                    d.tankLevel > 30 -> Color.parseColor("#FFA726")
+                    else             -> Color.parseColor("#EF5350")
+                }
+                progressTank.progressTintList = ColorStateList.valueOf(tankColor)
+
+                val phColor = when {
+                    d.ph in 5.5f..6.2f -> Color.parseColor("#2E7D32")
+                    d.ph > 0f          -> Color.parseColor("#E65100")
+                    else               -> Color.parseColor("#999999")
+                }
+                txtPhValue.setTextColor(phColor)
+
+                txtFertAMl.text        = "%.1f ml".format(d.fertAMlTotal)
+                txtFertBMl.text        = "%.1f ml".format(d.fertBMlTotal)
+                txtAcidMl.text         = "%.1f ml".format(d.acidMlTotal)
+                txtWaterAddedTotal.text = "%.1f L".format(d.waterAddedLiters)
             }
         }
 
         lifecycleScope.launch {
-            sensorDataManager.pumpStatus.collect { status ->
+            sensorDataManager.pumpStatus.collect { s ->
                 isUpdatingFromData = true
-                switchPhDown.isChecked = status.phDownRunning
-                switchFertilizerA.isChecked = status.fertilizerARunning
-                switchFertilizerB.isChecked = status.fertilizerBRunning
-                switchCirculation.isChecked = status.circulationRunning
+                switchPhDown.isChecked      = s.phDownRunning
+                switchFertilizerA.isChecked = s.fertilizerARunning
+                switchFertilizerB.isChecked = s.fertilizerBRunning
+                switchCirculation.isChecked = s.circulationRunning
                 isUpdatingFromData = false
             }
         }
 
         lifecycleScope.launch {
             mqttManager.connectionState.collect { connected ->
-                val msg = if (connected) "Bagli" else "Baglanti Kesildi"
-                title = "Marul Otomasyon - $msg"
+                title = if (connected) "Inci Tarim - Bagli" else "Inci Tarim - Baglanti Yok"
             }
         }
     }
@@ -130,77 +224,44 @@ class ControlActivity : AppCompatActivity() {
     private fun connectToMqtt() {
         val host = settingsManager.getMqttHost()
         val port = settingsManager.getMqttPort()
-
-        // Broker ayarlanmadıysa Ayarlar ekranına yönlendir
         if (host == Constants.MQTT_DEFAULT_HOST || host.isBlank()) {
-            Toast.makeText(this, "Lütfen MQTT broker IP'sini Ayarlar'dan girin", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Lutfen MQTT broker IP girin", Toast.LENGTH_LONG).show()
             startActivity(Intent(this, SettingsActivity::class.java))
             return
         }
-
         mqttManager.connect(host, port, object : MqttCallback {
-            override fun onConnected() {
-                runOnUiThread {
-                    Toast.makeText(this@ControlActivity, "MQTT Baglandi ($host:$port)", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            override fun onDisconnected() {
-                runOnUiThread {
-                    Toast.makeText(this@ControlActivity, "MQTT Baglantisi Kesildi", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            override fun onMessageReceived(topic: String, payload: String) {
-                runOnUiThread { updateSensorData(topic, payload) }
-            }
-
-            override fun onError(message: String) {
-                runOnUiThread {
-                    Toast.makeText(this@ControlActivity, "Hata: $message", Toast.LENGTH_SHORT).show()
-                }
-            }
+            override fun onConnected()  { runOnUiThread { Toast.makeText(this@ControlActivity, "Baglandi", Toast.LENGTH_SHORT).show() } }
+            override fun onDisconnected() { runOnUiThread { Toast.makeText(this@ControlActivity, "Baglanti kesildi", Toast.LENGTH_SHORT).show() } }
+            override fun onMessageReceived(topic: String, payload: String) { runOnUiThread { updateSensorData(topic, payload) } }
+            override fun onError(message: String) { runOnUiThread { Toast.makeText(this@ControlActivity, "Hata: $message", Toast.LENGTH_SHORT).show() } }
         })
     }
 
     private fun updateSensorData(topic: String, payload: String) {
         when (topic) {
-            Constants.TOPIC_PH       -> payload.toFloatOrNull()?.let { sensorDataManager.updatePh(it) }
-            Constants.TOPIC_EC       -> payload.toFloatOrNull()?.let { sensorDataManager.updateEc(it) }
-            Constants.TOPIC_TEMP     -> payload.toFloatOrNull()?.let { sensorDataManager.updateTemperature(it) }
-            Constants.TOPIC_TANK     -> payload.toFloatOrNull()?.let { sensorDataManager.updateTankLevel(it.toInt()) }
-            Constants.TOPIC_FLOW_A   -> payload.toFloatOrNull()?.let { sensorDataManager.updateFertilizerAFlowRate(it) }
-            Constants.TOPIC_FLOW_B   -> payload.toFloatOrNull()?.let { sensorDataManager.updateFertilizerBFlowRate(it) }
-            Constants.TOPIC_FLOW_PH  -> payload.toFloatOrNull()?.let { sensorDataManager.updatePhFlowRate(it) }
-            Constants.TOPIC_STATUS_PH_DOWN -> {
-                isUpdatingFromData = true
-                sensorDataManager.setPumpStatus(phDown = payload == "1")
-                isUpdatingFromData = false
-            }
-            Constants.TOPIC_STATUS_FERT_A -> {
-                isUpdatingFromData = true
-                sensorDataManager.setPumpStatus(fertilizerA = payload == "1")
-                isUpdatingFromData = false
-            }
-            Constants.TOPIC_STATUS_FERT_B -> {
-                isUpdatingFromData = true
-                sensorDataManager.setPumpStatus(fertilizerB = payload == "1")
-                isUpdatingFromData = false
-            }
-            Constants.TOPIC_STATUS_CIRC -> {
-                isUpdatingFromData = true
-                sensorDataManager.setPumpStatus(circulation = payload == "1")
-                isUpdatingFromData = false
-            }
+            Constants.TOPIC_PH         -> payload.toFloatOrNull()?.let { sensorDataManager.updatePh(it) }
+            Constants.TOPIC_EC         -> payload.toFloatOrNull()?.let { sensorDataManager.updateEc(it) }
+            Constants.TOPIC_TEMP       -> payload.toFloatOrNull()?.let { sensorDataManager.updateTemperature(it) }
+            Constants.TOPIC_HUMIDITY   -> payload.toFloatOrNull()?.let { sensorDataManager.updateHumidity(it) }
+            Constants.TOPIC_WATER_TEMP -> payload.toFloatOrNull()?.let { sensorDataManager.updateWaterTemperature(it) }
+            Constants.TOPIC_TANK       -> payload.toFloatOrNull()?.let { sensorDataManager.updateTankLevel(it.toInt()) }
+            Constants.TOPIC_WATER_ADDED-> payload.toFloatOrNull()?.let { sensorDataManager.updateWaterAdded(it) }
+            Constants.TOPIC_FLOW_A     -> payload.toFloatOrNull()?.let { sensorDataManager.updateFertilizerAFlowRate(it) }
+            Constants.TOPIC_FLOW_B     -> payload.toFloatOrNull()?.let { sensorDataManager.updateFertilizerBFlowRate(it) }
+            Constants.TOPIC_FLOW_PH    -> payload.toFloatOrNull()?.let { sensorDataManager.updatePhFlowRate(it) }
+            Constants.TOPIC_FERT_A_ML  -> payload.toFloatOrNull()?.let { sensorDataManager.updateFertAMl(it) }
+            Constants.TOPIC_FERT_B_ML  -> payload.toFloatOrNull()?.let { sensorDataManager.updateFertBMl(it) }
+            Constants.TOPIC_ACID_ML    -> payload.toFloatOrNull()?.let { sensorDataManager.updateAcidMl(it) }
+            Constants.TOPIC_STATUS_PH_DOWN -> { isUpdatingFromData = true; sensorDataManager.setPumpStatus(phDown = payload == "1"); isUpdatingFromData = false }
+            Constants.TOPIC_STATUS_FERT_A  -> { isUpdatingFromData = true; sensorDataManager.setPumpStatus(fertilizerA = payload == "1"); isUpdatingFromData = false }
+            Constants.TOPIC_STATUS_FERT_B  -> { isUpdatingFromData = true; sensorDataManager.setPumpStatus(fertilizerB = payload == "1"); isUpdatingFromData = false }
+            Constants.TOPIC_STATUS_CIRC    -> { isUpdatingFromData = true; sensorDataManager.setPumpStatus(circulation = payload == "1"); isUpdatingFromData = false }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        // Ayarlar ekranından dönüldüğünde bağlantıyı yenile
-        if (!mqttManager.isConnected()) {
-            connectToMqtt()
-        }
+        if (!mqttManager.isConnected()) connectToMqtt()
     }
 
     override fun onDestroy() {

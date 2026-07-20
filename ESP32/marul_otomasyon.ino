@@ -1,7 +1,7 @@
 /*
  * ================================================
  *  İNCİ TARIM - Hidroponik Otomasyon Sistemi
- *  ESP32 MQTT Firmware v1.0
+ *  ESP32 MQTT Firmware v2.0
  * ================================================
  *
  * Gerekli Kütüphaneler (Arduino Library Manager):
@@ -9,9 +9,16 @@
  *   - DHT sensor library    (Adafruit)
  *   - OneWire               (Jim Studt)
  *   - DallasTemperature     (Miles Burton)
- *   - ArduinoJson           (Benoit Blanchon)
  *   - NTPClient             (Fabrice Weinberg)
  *
+ * İlk Kurulum:
+ *   1. Kodu yükle (WiFi/MQTT ayarı gerekmez)
+ *   2. Telefon Bluetooth'undan "InciTarim-Config" ile eşleş
+ *   3. İnci Tarım uygulamasındaki "ESP32 Yapılandır" ekranını aç
+ *   4. WiFi adı, WiFi şifresi, MQTT IP gir → Gönder
+ *   5. ESP32 ayarları kaydeder ve yeniden başlar
+ *
+ *  BOOT butonu 3 sn. basılı tutulursa config modu sıfırlanır.
  * ================================================
  */
 
@@ -20,28 +27,15 @@
 #include <DHT.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <ArduinoJson.h>
 #include <NTPClient.h>
 #include <WiFiUDP.h>
 #include <Preferences.h>
+#include "BluetoothSerial.h"
 
-// ============================================================
-//  WiFi Ayarları
-// ============================================================
-#define WIFI_SSID     "WIFI_ADINIZ"
-#define WIFI_PASS     "WIFI_SIFRENIZ"
-
-// ============================================================
-//  MQTT Broker (Raspberry Pi - Tailscale IP veya lokal IP)
-//  Örnek Tailscale IP: "100.x.x.x"
-//  Örnek lokal IP    : "192.168.1.100"
-// ============================================================
-#define MQTT_HOST     "192.168.1.100"
 #define MQTT_PORT     1883
 #define MQTT_CLIENT   "esp32_marul"
-// Şifre koyduysanız aktif edin:
-// #define MQTT_USER  "kullanici"
-// #define MQTT_PASS  "sifre"
+#define BT_DEVICE_NAME "InciTarim-Config"
+#define PIN_BOOT      0   // BOOT butonu (config sıfırlama için)
 
 // ============================================================
 //  Pin Tanımları
@@ -100,6 +94,7 @@
 // ============================================================
 //  Nesneler
 // ============================================================
+BluetoothSerial    btSerial;
 WiFiClient         wifiClient;
 PubSubClient       mqtt(wifiClient);
 DHT                dht(PIN_DHT22, DHT22);
@@ -108,6 +103,12 @@ DallasTemperature  ds18b20(&oneWire);
 WiFiUDP            ntpUDP;
 NTPClient          timeClient(ntpUDP, "pool.ntp.org", 10800); // UTC+3
 Preferences        prefs;
+
+// Kaydedilen WiFi/MQTT ayarları
+String savedSSID   = "";
+String savedPass   = "";
+String savedMqtt   = "";
+bool   configMode  = false; // BT provisioning modu aktif mi
 
 // ============================================================
 //  Değişkenler
@@ -378,24 +379,117 @@ void checkTimers() {
 }
 
 // ============================================================
-//  Kaydedilmiş verileri NVS'den yükle
+//  NVS'den yükle
 // ============================================================
 void loadPreferences() {
-    prefs.begin("marul", true); // read-only
+    prefs.begin("marul", true);
     fertAMlTotal  = prefs.getFloat("fert_a", 0);
     fertBMlTotal  = prefs.getFloat("fert_b", 0);
     acidMlTotal   = prefs.getFloat("acid",   0);
     waterAddedLit = prefs.getFloat("water",  0);
-
+    savedSSID  = prefs.getString("wifi_ssid", "");
+    savedPass  = prefs.getString("wifi_pass", "");
+    savedMqtt  = prefs.getString("mqtt_host", "");
     String pumpTmr  = prefs.getString("pump_tmr",  "00:00 - 24:00");
     String lightTmr = prefs.getString("light_tmr", "06:00 - 22:00");
     prefs.end();
+    parseTimer(pumpTmr,  pumpStartH, pumpStartM, pumpEndH,  pumpEndM);
+    parseTimer(lightTmr, lightStartH,lightStartM,lightEndH, lightEndM);
+}
 
-    parseTimer(pumpTmr,  pumpStartH,  pumpStartM,  pumpEndH,  pumpEndM);
-    parseTimer(lightTmr, lightStartH, lightStartM, lightEndH, lightEndM);
+// ============================================================
+//  Bluetooth Provisioning Modu
+//  Protokol (satır bazlı):
+//    Uygulama gönderir → ESP32 yanıtlar
+//    SSID:MyNetwork    → OK:SSID
+//    PASS:MyPassword   → OK:PASS
+//    MQTT:192.168.1.10 → OK:MQTT
+//    SAVE              → SAVED (sonra reboot)
+//    STATUS            → SSID:xxx|MQTT:xxx
+// ============================================================
+void runBluetoothConfig() {
+    btSerial.begin(BT_DEVICE_NAME);
+    Serial.println("[BT] Provisioning modu aktif: " + String(BT_DEVICE_NAME));
 
-    Serial.printf("Yüklendi → FertA:%.1f FertB:%.1f Asit:%.1f Su:%.2fL\n",
-                  fertAMlTotal, fertBMlTotal, acidMlTotal, waterAddedLit);
+    // LED ile göster (varsa)
+    String rxBuf = "";
+    unsigned long lastBlink = 0;
+
+    btSerial.println("=== İnci Tarım ESP32 Yapılandırma ===");
+    btSerial.println("Mevcut: SSID=" + (savedSSID.isEmpty() ? "(yok)" : savedSSID)
+                     + " MQTT=" + (savedMqtt.isEmpty() ? "(yok)" : savedMqtt));
+    btSerial.println("Komutlar: SSID:... PASS:... MQTT:... SAVE STATUS");
+
+    while (true) {
+        // BOOT butonuna 3 sn basılırsa çık (debug için)
+        if (digitalRead(PIN_BOOT) == LOW) {
+            delay(3000);
+            if (digitalRead(PIN_BOOT) == LOW) {
+                btSerial.println("BOOT basili - cikiliyor");
+                break;
+            }
+        }
+
+        if (!btSerial.available()) {
+            delay(10);
+            continue;
+        }
+
+        char c = (char)btSerial.read();
+        if (c == '\r') continue;
+        if (c != '\n') { rxBuf += c; continue; }
+
+        // Tam satır geldi
+        rxBuf.trim();
+        Serial.println("[BT RX] " + rxBuf);
+
+        if (rxBuf.startsWith("SSID:")) {
+            savedSSID = rxBuf.substring(5);
+            btSerial.println("OK:SSID=" + savedSSID);
+        }
+        else if (rxBuf.startsWith("PASS:")) {
+            savedPass = rxBuf.substring(5);
+            btSerial.println("OK:PASS=****");
+        }
+        else if (rxBuf.startsWith("MQTT:")) {
+            savedMqtt = rxBuf.substring(5);
+            btSerial.println("OK:MQTT=" + savedMqtt);
+        }
+        else if (rxBuf == "SAVE") {
+            if (savedSSID.isEmpty() || savedPass.isEmpty() || savedMqtt.isEmpty()) {
+                btSerial.println("HATA: Tum alanlari girin (SSID, PASS, MQTT)");
+            } else {
+                prefs.begin("marul", false);
+                prefs.putString("wifi_ssid", savedSSID);
+                prefs.putString("wifi_pass", savedPass);
+                prefs.putString("mqtt_host", savedMqtt);
+                prefs.end();
+                btSerial.println("SAVED");
+                btSerial.println("ESP32 yeniden baslatiliyor...");
+                delay(500);
+                btSerial.end();
+                ESP.restart();
+            }
+        }
+        else if (rxBuf == "STATUS") {
+            btSerial.println("SSID:" + savedSSID + "|MQTT:" + savedMqtt);
+        }
+        else if (rxBuf == "RESET") {
+            prefs.begin("marul", false);
+            prefs.remove("wifi_ssid");
+            prefs.remove("wifi_pass");
+            prefs.remove("mqtt_host");
+            prefs.end();
+            btSerial.println("CONFIG SIFIRLANDI - Yeniden baslatiliyor...");
+            delay(500);
+            btSerial.end();
+            ESP.restart();
+        }
+        else {
+            btSerial.println("HATA: Bilinmeyen komut: " + rxBuf);
+        }
+        rxBuf = "";
+    }
 }
 
 // ============================================================
@@ -405,44 +499,56 @@ void setup() {
     Serial.begin(115200);
     Serial.println("\n=== İnci Tarım Başlatılıyor ===");
 
-    // Pin modları
-    pinMode(PIN_TRIG,       OUTPUT);
-    pinMode(PIN_ECHO,       INPUT);
-    pinMode(PIN_PUMP_CIRC,  OUTPUT); digitalWrite(PIN_PUMP_CIRC,  RELAY_OFF);
-    pinMode(PIN_PUMP_DOSE_A,OUTPUT); digitalWrite(PIN_PUMP_DOSE_A,RELAY_OFF);
-    pinMode(PIN_PUMP_DOSE_B,OUTPUT); digitalWrite(PIN_PUMP_DOSE_B,RELAY_OFF);
-    pinMode(PIN_PUMP_ACID,  OUTPUT); digitalWrite(PIN_PUMP_ACID,  RELAY_OFF);
-    pinMode(PIN_PUMP_WATER, OUTPUT); digitalWrite(PIN_PUMP_WATER, RELAY_OFF);
-    pinMode(PIN_LIGHT,      OUTPUT); digitalWrite(PIN_LIGHT,      RELAY_OFF);
+    pinMode(PIN_BOOT,        INPUT_PULLUP);
+    pinMode(PIN_TRIG,        OUTPUT);
+    pinMode(PIN_ECHO,        INPUT);
+    pinMode(PIN_PUMP_CIRC,   OUTPUT); digitalWrite(PIN_PUMP_CIRC,   RELAY_OFF);
+    pinMode(PIN_PUMP_DOSE_A, OUTPUT); digitalWrite(PIN_PUMP_DOSE_A, RELAY_OFF);
+    pinMode(PIN_PUMP_DOSE_B, OUTPUT); digitalWrite(PIN_PUMP_DOSE_B, RELAY_OFF);
+    pinMode(PIN_PUMP_ACID,   OUTPUT); digitalWrite(PIN_PUMP_ACID,   RELAY_OFF);
+    pinMode(PIN_PUMP_WATER,  OUTPUT); digitalWrite(PIN_PUMP_WATER,  RELAY_OFF);
+    pinMode(PIN_LIGHT,       OUTPUT); digitalWrite(PIN_LIGHT,       RELAY_OFF);
 
-    // Sensörler
     dht.begin();
     ds18b20.begin();
-    analogReadResolution(12); // ESP32 ADC: 12-bit (0-4095)
-    analogSetAttenuation(ADC_11db); // 0-3.3V giriş
+    analogReadResolution(12);
+    analogSetAttenuation(ADC_11db);
 
-    // Akış sensörü interrupt
     pinMode(PIN_FLOW_METER, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(PIN_FLOW_METER), onFlowPulse, RISING);
 
-    // NVS'den yükle
     loadPreferences();
 
-    // WiFi
-    Serial.printf("WiFi: %s\n", WIFI_SSID);
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
-    while (WiFi.status() != WL_CONNECTED) {
+    // BOOT butonu basılıysa config modunu zorla
+    bool bootHeld = (digitalRead(PIN_BOOT) == LOW);
+
+    // Config yok veya BOOT basılıysa BT provisioning moduna gir
+    if (savedSSID.isEmpty() || savedMqtt.isEmpty() || bootHeld) {
+        if (bootHeld) Serial.println("BOOT basili: Config modu zorlaniyor...");
+        else          Serial.println("Config bulunamadi: BT provisioning moduna giriliyor...");
+        configMode = true;
+        runBluetoothConfig(); // Bu fonksiyon SAVE'de ESP.restart() yapar
+        return;               // SAVE yapılmadan çıkılırsa buraya döner
+    }
+
+    // Normal mod: WiFi + MQTT
+    Serial.printf("WiFi: %s\n", savedSSID.c_str());
+    WiFi.begin(savedSSID.c_str(), savedPass.c_str());
+    unsigned long wStart = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - wStart < 15000) {
         delay(500); Serial.print(".");
     }
-    Serial.printf("\nBağlandı! IP: %s\n", WiFi.localIP().toString().c_str());
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("\nWiFi baglanamiyor! BT config moduna giriliyor...");
+        runBluetoothConfig();
+        return;
+    }
+    Serial.printf("\nWiFi bağlandı: %s\n", WiFi.localIP().toString().c_str());
 
-    // NTP
     timeClient.begin();
     timeClient.update();
-    Serial.printf("Saat: %02d:%02d\n", timeClient.getHours(), timeClient.getMinutes());
 
-    // MQTT
-    mqtt.setServer(MQTT_HOST, MQTT_PORT);
+    mqtt.setServer(savedMqtt.c_str(), MQTT_PORT);
     mqtt.setCallback(onMqttMessage);
     mqtt.setKeepAlive(30);
     connectMQTT();
@@ -454,6 +560,8 @@ void setup() {
 //  LOOP
 // ============================================================
 void loop() {
+    if (configMode) return; // BT modunda loop kullanılmaz
+
     // WiFi koptu mu?
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("WiFi kesildi, yeniden bağlanıyor...");
@@ -462,16 +570,10 @@ void loop() {
         return;
     }
 
-    // MQTT koptu mu?
-    if (!mqtt.connected()) {
-        connectMQTT();
-    }
+    if (!mqtt.connected()) connectMQTT();
     mqtt.loop();
-
-    // NTP güncelle (her 60s)
     timeClient.update();
 
-    // Sensör yayını (5s)
     if (millis() - lastSensorPublish >= SENSOR_INTERVAL) {
         lastSensorPublish = millis();
         publishSensors();

@@ -16,7 +16,9 @@ import com.marul.otomasyon.manager.BluetoothCallback
 import com.marul.otomasyon.manager.BluetoothManager
 import com.marul.otomasyon.manager.SettingsManager
 import com.marul.otomasyon.util.Constants
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class SetupActivity : AppCompatActivity(), BluetoothCallback {
     private lateinit var bluetoothManager: BluetoothManager
@@ -123,16 +125,16 @@ class SetupActivity : AppCompatActivity(), BluetoothCallback {
 
     @SuppressLint("MissingPermission")
     private fun sendWifiConfigToDevice(ssid: String, password: String, phMax: Float, phMin: Float, ecMin: Float) {
-        lifecycleScope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 bluetoothManager.writeCharacteristic(Constants.CHAR_SSID_UUID, ssid)
-                Thread.sleep(100)
+                delay(100)
                 bluetoothManager.writeCharacteristic(Constants.CHAR_PASSWORD_UUID, password)
-                Thread.sleep(100)
+                delay(100)
                 bluetoothManager.writeCharacteristic(Constants.CHAR_PH_MAX_UUID, phMax.toString())
-                Thread.sleep(100)
+                delay(100)
                 bluetoothManager.writeCharacteristic(Constants.CHAR_PH_MIN_UUID, phMin.toString())
-                Thread.sleep(100)
+                delay(100)
                 bluetoothManager.writeCharacteristic(Constants.CHAR_EC_MIN_UUID, ecMin.toString())
 
                 settingsManager.saveWifiConfig(

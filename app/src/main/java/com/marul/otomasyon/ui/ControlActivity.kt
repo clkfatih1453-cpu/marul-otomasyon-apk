@@ -6,9 +6,8 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
-import android.text.InputType
+import android.view.MotionEvent
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
@@ -56,6 +55,15 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var txtLightTimer: TextView
 
     private var isUpdatingFromData = false
+    private var currentFertATotal = 0f
+    private var currentFertBTotal = 0f
+    private var currentAcidTotal = 0f
+    private var holdDoseA = false
+    private var holdDoseB = false
+    private var holdDoseAcid = false
+    private var holdDoseAStartTotal = 0f
+    private var holdDoseBStartTotal = 0f
+    private var holdDoseAcidStartTotal = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,9 +120,33 @@ class ControlActivity : AppCompatActivity() {
             if (!isUpdatingFromData) { sensorDataManager.setPumpStatus(circulation = c); mqttManager.publish(Constants.TOPIC_CTRL_CIRC, if (c) "1" else "0") }
         }
 
-        btnDoseFertA.setOnClickListener { showDoseDialog("Gubre A", Constants.TOPIC_CTRL_DOSE_A, txtDoseFertA) }
-        btnDoseFertB.setOnClickListener { showDoseDialog("Gubre B", Constants.TOPIC_CTRL_DOSE_B, txtDoseFertB) }
-        btnDoseAcid.setOnClickListener  { showDoseDialog("Asit", Constants.TOPIC_CTRL_DOSE_ACID, txtDoseAcid) }
+        setupHoldDoseButton(
+            button = btnDoseFertA,
+            label = txtDoseFertA,
+            name = "Gubre A",
+            topic = Constants.TOPIC_CTRL_FERT_A,
+            startTotal = { holdDoseAStartTotal = currentFertATotal; holdDoseA = true },
+            stopTotal = { holdDoseA = false },
+            currentDelta = { (currentFertATotal - holdDoseAStartTotal).coerceAtLeast(0f) }
+        )
+        setupHoldDoseButton(
+            button = btnDoseFertB,
+            label = txtDoseFertB,
+            name = "Gubre B",
+            topic = Constants.TOPIC_CTRL_FERT_B,
+            startTotal = { holdDoseBStartTotal = currentFertBTotal; holdDoseB = true },
+            stopTotal = { holdDoseB = false },
+            currentDelta = { (currentFertBTotal - holdDoseBStartTotal).coerceAtLeast(0f) }
+        )
+        setupHoldDoseButton(
+            button = btnDoseAcid,
+            label = txtDoseAcid,
+            name = "Asit",
+            topic = Constants.TOPIC_CTRL_PH_DOWN,
+            startTotal = { holdDoseAcidStartTotal = currentAcidTotal; holdDoseAcid = true },
+            stopTotal = { holdDoseAcid = false },
+            currentDelta = { (currentAcidTotal - holdDoseAcidStartTotal).coerceAtLeast(0f) }
+        )
 
         btnPumpTimer.setOnClickListener  { showTimerDialog("Devirdaim Pompasi", Constants.TOPIC_CTRL_PUMP_TMR, txtPumpTimer, Constants.PREF_PUMP_TIMER) }
         btnLightTimer.setOnClickListener { showTimerDialog("Spektrum Isik", Constants.TOPIC_CTRL_LIGHT_TMR, txtLightTimer, Constants.PREF_LIGHT_TIMER) }
@@ -133,27 +165,39 @@ class ControlActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDoseDialog(name: String, topic: String, label: TextView) {
-        val input = EditText(this).apply {
-            hint = "ml (orn: 50)"
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setPadding(40, 20, 40, 20)
-        }
-        AlertDialog.Builder(this)
-            .setTitle(name + " Dozaji")
-            .setMessage("Verilecek miktar (ml):")
-            .setView(input)
-            .setPositiveButton("Gonder") { _, _ ->
-                val ml = input.text.toString().trim()
-                if (ml.isNotEmpty() && ml.toFloatOrNull() != null) {
-                    mqttManager.publish(topic, ml)
-                    label.text = "Son: " + ml + " ml"
-                    Toast.makeText(this, name + ": " + ml + " ml gonderildi", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Gecersiz miktar", Toast.LENGTH_SHORT).show()
+    private fun setupHoldDoseButton(
+        button: Button,
+        label: TextView,
+        name: String,
+        topic: String,
+        startTotal: () -> Unit,
+        stopTotal: () -> Unit,
+        currentDelta: () -> Float
+    ) {
+        var pressing = false
+        button.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    pressing = true
+                    startTotal()
+                    mqttManager.publish(topic, "1")
+                    label.text = "Verilen: 0.0 ml"
+                    true
                 }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (pressing) {
+                        pressing = false
+                        stopTotal()
+                        mqttManager.publish(topic, "0")
+                        val ml = currentDelta()
+                        label.text = "Verilen: %.1f ml".format(ml)
+                        Toast.makeText(this, "$name: %.1f ml verildi".format(ml), Toast.LENGTH_SHORT).show()
+                    }
+                    true
+                }
+                else -> false
             }
-            .setNegativeButton("Iptal", null).show()
+        }
     }
 
     private fun showTimerDialog(name: String, topic: String, label: TextView, prefKey: String) {
@@ -196,10 +240,17 @@ class ControlActivity : AppCompatActivity() {
                 }
                 txtPhValue.setTextColor(phColor)
 
+                currentFertATotal = d.fertAMlTotal
+                currentFertBTotal = d.fertBMlTotal
+                currentAcidTotal = d.acidMlTotal
                 txtFertAMl.text        = "%.1f ml".format(d.fertAMlTotal)
                 txtFertBMl.text        = "%.1f ml".format(d.fertBMlTotal)
                 txtAcidMl.text         = "%.1f ml".format(d.acidMlTotal)
                 txtWaterAddedTotal.text = "%.1f L".format(d.waterAddedLiters)
+
+                if (holdDoseA) txtDoseFertA.text = "Verilen: %.1f ml".format((currentFertATotal - holdDoseAStartTotal).coerceAtLeast(0f))
+                if (holdDoseB) txtDoseFertB.text = "Verilen: %.1f ml".format((currentFertBTotal - holdDoseBStartTotal).coerceAtLeast(0f))
+                if (holdDoseAcid) txtDoseAcid.text = "Verilen: %.1f ml".format((currentAcidTotal - holdDoseAcidStartTotal).coerceAtLeast(0f))
             }
         }
 
@@ -224,8 +275,11 @@ class ControlActivity : AppCompatActivity() {
     private fun connectToMqtt() {
         val host = settingsManager.getMqttHost()
         val port = settingsManager.getMqttPort()
-        if (host == Constants.MQTT_DEFAULT_HOST || host.isBlank()) {
-            Toast.makeText(this, "Lutfen MQTT broker IP girin", Toast.LENGTH_LONG).show()
+        val brokerId = settingsManager.getMqttBrokerId()
+        val mqttUrl = settingsManager.getMqttUrl()
+        val provider = settingsManager.getMqttProvider()
+        if ((host == Constants.MQTT_DEFAULT_HOST || host.isBlank()) && mqttUrl.isBlank()) {
+            Toast.makeText(this, "Lutfen MQTT broker IP veya MQTT URL girin", Toast.LENGTH_LONG).show()
             startActivity(Intent(this, SettingsActivity::class.java))
             return
         }
@@ -234,7 +288,7 @@ class ControlActivity : AppCompatActivity() {
             override fun onDisconnected() { runOnUiThread { Toast.makeText(this@ControlActivity, "Baglanti kesildi", Toast.LENGTH_SHORT).show() } }
             override fun onMessageReceived(topic: String, payload: String) { runOnUiThread { updateSensorData(topic, payload) } }
             override fun onError(message: String) { runOnUiThread { Toast.makeText(this@ControlActivity, "Hata: $message", Toast.LENGTH_SHORT).show() } }
-        })
+        }, brokerId, mqttUrl, provider)
     }
 
     private fun updateSensorData(topic: String, payload: String) {

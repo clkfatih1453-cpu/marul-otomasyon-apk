@@ -48,6 +48,54 @@
             android:padding="@dimen/padding_medium"
             android:background="@drawable/rounded_background" />
 
+        <EditText
+            android:id="@+id/edt_mqtt_broker_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Broker ID / Client ID (opsiyonel)"
+            android:inputType="text"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <EditText
+            android:id="@+id/edt_mqtt_provider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Sağlayıcı (ör: EMQX, HiveMQ, Mosquitto)"
+            android:inputType="text"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <EditText
+            android:id="@+id/edt_mqtt_url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="MQTT URL (ör: mqtt://192.168.1.100:1883)"
+            android:inputType="textUri"
+            android:layout_marginBottom="@dimen/padding_medium"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <EditText
+            android:id="@+id/edt_mqtt_ws_url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="WebSocket URL (ör: ws://192.168.1.100:9001/mqtt)"
+            android:inputType="textUri"
+            android:layout_marginBottom="@dimen/padding_small"
+            android:padding="@dimen/padding_medium"
+            android:background="@drawable/rounded_background" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Not: Uygulama aktif bağlantıda Broker IP + Port kullanır. MQTT URL girerseniz host/port otomatik çıkarılır."
+            android:textSize="@dimen/text_size_small"
+            android:textColor="#666666"
+            android:layout_marginBottom="@dimen/padding_large" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -111,6 +159,14 @@
             android:textSize="@dimen/text_size_large"
             android:textStyle="bold"
             android:textColor="@color/primary"
+            android:layout_marginBottom="@dimen/padding_medium" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dozaj Süresi: pompa çalışma süresi (milisaniye). Ölçüm Periyodu: sensör verisi yenileme aralığı (milisaniye). Örn: 5000 = 5 saniye, 120000 = 2 dakika."
+            android:textSize="@dimen/text_size_small"
+            android:textColor="#666666"
             android:layout_marginBottom="@dimen/padding_medium" />
 
         <EditText

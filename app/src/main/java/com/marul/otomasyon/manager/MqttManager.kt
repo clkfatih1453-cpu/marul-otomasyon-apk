@@ -13,6 +13,8 @@ import org.eclipse.paho.client.mqttv3.MqttClient
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
+import java.net.URI
+import java.net.URISyntaxException
 import java.util.UUID
 
 interface MqttCallback {
@@ -41,14 +43,28 @@ class MqttManager {
         Constants.TOPIC_STATUS_FERT_B, Constants.TOPIC_STATUS_CIRC
     )
 
-    fun connect(brokerHost: String, port: Int, callback: MqttCallback) {
+    fun connect(
+        brokerHost: String,
+        port: Int,
+        callback: MqttCallback,
+        brokerId: String = "",
+        mqttUrl: String = "",
+        provider: String = ""
+    ) {
         this.callback = callback
-        if (brokerHost.isBlank()) {
+        val endpoint = resolveEndpoint(brokerHost, port, mqttUrl, provider)
+        if (endpoint == null) {
             callback.onError("Broker IP adresi boş. Ayarlar ekranından girin.")
             return
         }
-        val clientId = "marul-android-${UUID.randomUUID().toString().take(8)}"
-        val brokerUri = "tcp://$brokerHost:$port"
+        val (resolvedHost, resolvedPort) = endpoint
+        val normalizedBrokerId = brokerId.trim().replace("\\s+".toRegex(), "-")
+        val clientId = if (normalizedBrokerId.isNotBlank()) {
+            "marul-android-$normalizedBrokerId"
+        } else {
+            "marul-android-${UUID.randomUUID().toString().take(8)}"
+        }
+        val brokerUri = "tcp://$resolvedHost:$resolvedPort"
 
         scope.launch {
             try {
@@ -125,4 +141,55 @@ class MqttManager {
     }
 
     fun isConnected() = _connectionState.value
+
+    private fun resolveEndpoint(
+        brokerHost: String,
+        port: Int,
+        mqttUrl: String,
+        provider: String
+    ): Pair<String, Int>? {
+        var host = brokerHost.trim()
+        var resolvedPort = if (port > 0) port else Constants.MQTT_DEFAULT_PORT
+
+        if (mqttUrl.isNotBlank()) {
+            parseMqttEndpoint(mqttUrl)?.let {
+                host = it.first
+                resolvedPort = it.second
+            }
+        }
+
+        if (host.contains("://")) {
+            parseMqttEndpoint(host)?.let {
+                host = it.first
+                resolvedPort = it.second
+            }
+        }
+
+        host = host.substringBefore("/").trim().lowercase()
+        if (host.isBlank()) return null
+
+        // HiveMQ için kullanıcıların sık yaptığı "hivemq.com" girişini çalışan public broker'a çevir.
+        if (host == "hivemq.com") {
+            host = "broker.hivemq.com"
+            if (resolvedPort <= 0) resolvedPort = 1883
+        }
+        if (provider.contains("hivemq", ignoreCase = true) && host == "www.hivemq.com") {
+            host = "broker.hivemq.com"
+        }
+
+        return host to resolvedPort
+    }
+
+    private fun parseMqttEndpoint(raw: String): Pair<String, Int>? {
+        return try {
+            val normalized = if (raw.contains("://")) raw else "mqtt://$raw"
+            val uri = URI(normalized)
+            val host = uri.host?.trim()?.lowercase().orEmpty()
+            if (host.isBlank()) return null
+            val port = if (uri.port > 0) uri.port else Constants.MQTT_DEFAULT_PORT
+            host to port
+        } catch (_: URISyntaxException) {
+            null
+        }
+    }
 }

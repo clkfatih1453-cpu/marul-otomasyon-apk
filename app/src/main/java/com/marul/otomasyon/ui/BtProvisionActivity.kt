@@ -19,6 +19,8 @@ import androidx.core.app.ActivityCompat
 import com.marul.otomasyon.R
 import com.marul.otomasyon.manager.SettingsManager
 import kotlinx.coroutines.*
+import java.net.URI
+import java.net.URISyntaxException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
@@ -166,7 +168,7 @@ class BtProvisionActivity : AppCompatActivity() {
     private fun sendConfig() {
         val ssid = edtSsid.text.toString().trim()
         val pass = edtPass.text.toString()
-        val mqtt = edtMqttIp.text.toString().trim()
+        val mqtt = normalizeMqttHost(edtMqttIp.text.toString().trim())
 
         if (ssid.isBlank() || pass.isBlank() || mqtt.isBlank()) {
             toast("Tüm alanları doldurun")
@@ -197,6 +199,22 @@ class BtProvisionActivity : AppCompatActivity() {
     private fun sendLine(cmd: String) {
         outputStream?.write("$cmd\n".toByteArray())
         outputStream?.flush()
+    }
+
+    private fun normalizeMqttHost(raw: String): String {
+        var host = raw.trim().lowercase()
+        if (host.isBlank()) return ""
+        if (host.contains("://")) {
+            host = try {
+                val uri = URI(host)
+                uri.host?.trim()?.lowercase().orEmpty()
+            } catch (_: URISyntaxException) {
+                host
+            }
+        }
+        host = host.substringBefore("/").trim()
+        if (host == "hivemq.com" || host == "www.hivemq.com") return "broker.hivemq.com"
+        return host
     }
 
     private fun disconnect() {

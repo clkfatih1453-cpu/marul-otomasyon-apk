@@ -49,7 +49,10 @@ class MqttManager {
         callback: MqttCallback,
         brokerId: String = "",
         mqttUrl: String = "",
-        provider: String = ""
+        provider: String = "",
+        username: String = "",
+        mqttPassword: String = "",
+        useTls: Boolean = false
     ) {
         this.callback = callback
         val endpoint = resolveEndpoint(brokerHost, port, mqttUrl, provider)
@@ -57,14 +60,18 @@ class MqttManager {
             callback.onError("Broker IP adresi boş. Ayarlar ekranından girin.")
             return
         }
-        val (resolvedHost, resolvedPort) = endpoint
+        val (resolvedHost, resolvedPortRaw) = endpoint
+        var resolvedPort = resolvedPortRaw
+        if (useTls && resolvedPort == Constants.MQTT_DEFAULT_PORT && resolvedHost.endsWith(".hivemq.cloud")) {
+            resolvedPort = 8883
+        }
         val normalizedBrokerId = brokerId.trim().replace("\\s+".toRegex(), "-")
         val clientId = if (normalizedBrokerId.isNotBlank()) {
             "marul-android-$normalizedBrokerId"
         } else {
             "marul-android-${UUID.randomUUID().toString().take(8)}"
         }
-        val brokerUri = "tcp://$resolvedHost:$resolvedPort"
+        val brokerUri = if (useTls) "ssl://$resolvedHost:$resolvedPort" else "tcp://$resolvedHost:$resolvedPort"
 
         scope.launch {
             try {
@@ -74,6 +81,8 @@ class MqttManager {
                     connectionTimeout = 10
                     keepAliveInterval = 30
                     isAutomaticReconnect = true
+                    if (username.isNotBlank()) userName = username
+                    if (mqttPassword.isNotBlank()) password = mqttPassword.toCharArray()
                 }
 
                 mqttClient.setCallback(object : MqttCallbackExtended {

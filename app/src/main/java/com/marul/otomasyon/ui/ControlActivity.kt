@@ -278,6 +278,9 @@ class ControlActivity : AppCompatActivity() {
         val brokerId = settingsManager.getMqttBrokerId()
         val mqttUrl = settingsManager.getMqttUrl()
         val provider = settingsManager.getMqttProvider()
+        val mqttUsername = settingsManager.getMqttUsername()
+        val mqttPassword = settingsManager.getMqttPassword()
+        val mqttUseTls = settingsManager.getMqttUseTls()
         if ((host == Constants.MQTT_DEFAULT_HOST || host.isBlank()) && mqttUrl.isBlank()) {
             Toast.makeText(this, "Lutfen MQTT broker IP veya MQTT URL girin", Toast.LENGTH_LONG).show()
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -288,7 +291,7 @@ class ControlActivity : AppCompatActivity() {
             override fun onDisconnected() { runOnUiThread { Toast.makeText(this@ControlActivity, "Baglanti kesildi", Toast.LENGTH_SHORT).show() } }
             override fun onMessageReceived(topic: String, payload: String) { runOnUiThread { updateSensorData(topic, payload) } }
             override fun onError(message: String) { runOnUiThread { Toast.makeText(this@ControlActivity, "Hata: $message", Toast.LENGTH_SHORT).show() } }
-        }, brokerId, mqttUrl, provider)
+        }, brokerId, mqttUrl, provider, mqttUsername, mqttPassword, mqttUseTls)
     }
 
     private fun updateSensorData(topic: String, payload: String) {

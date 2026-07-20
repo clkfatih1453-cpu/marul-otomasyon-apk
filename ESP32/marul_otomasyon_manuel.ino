@@ -5,7 +5,7 @@
  * ================================================
  *
  *  KURULUM:
- *  1. Aşağıdaki 3 satırı doldurun
+ *  1. Aşağıdaki satırları doldurun
  *  2. Arduino IDE'den ESP32'ye yükleyin
  *  3. Bitti!
  *
@@ -23,7 +23,11 @@
 // ============================================================
 #define WIFI_SSID   "WIFI_ADINIZ"       // WiFi ağ adı
 #define WIFI_PASS   "WIFI_SIFRENIZ"     // WiFi şifresi
-#define MQTT_HOST   "192.168.1.100"     // Raspberry Pi IP adresi
+#define MQTT_HOST   "broker.hivemq.com" // Broker host (HiveMQ Cloud: xxxx.s1....hivemq.cloud)
+#define MQTT_PORT   1883                // HiveMQ Cloud TLS: 8883
+#define MQTT_USER   ""                  // HiveMQ Cloud kullanıcı adı
+#define MQTT_PASS   ""                  // HiveMQ Cloud şifre
+#define MQTT_TLS    false               // HiveMQ Cloud için true
 // ============================================================
 
 #include <WiFi.h>
@@ -34,6 +38,7 @@
 #include <NTPClient.h>
 #include <WiFiUDP.h>
 #include <Preferences.h>
+#include <WiFiClientSecure.h>
 
 // ============================================================
 //  Pin Tanımları  (devrenize göre değiştirin)
@@ -56,7 +61,6 @@
 // ============================================================
 //  Sistem Sabitleri  (tankınıza göre ayarlayın)
 // ============================================================
-#define MQTT_PORT          1883
 #define MQTT_CLIENT        "esp32_marul"
 #define TANK_HEIGHT_CM       50    // Tank yüksekliği cm
 #define SENSOR_OFFSET_CM      5    // Sensörün taban boşluğu cm
@@ -98,6 +102,7 @@
 //  Nesneler
 // ============================================================
 WiFiClient         wifiClient;
+WiFiClientSecure   wifiSecureClient;
 PubSubClient       mqtt(wifiClient);
 DHT                dht(PIN_DHT22, DHT22);
 OneWire            oneWire(PIN_DS18B20);
@@ -366,7 +371,13 @@ void connectMQTT() {
     int retries = 0;
     while (!mqtt.connected() && retries < 10) {
         Serial.printf("MQTT bağlanıyor %s (deneme %d)...\n", MQTT_HOST, retries + 1);
-        if (mqtt.connect(MQTT_CLIENT)) {
+        bool ok = false;
+        if (String(MQTT_USER).length() > 0) {
+            ok = mqtt.connect(MQTT_CLIENT, MQTT_USER, MQTT_PASS);
+        } else {
+            ok = mqtt.connect(MQTT_CLIENT);
+        }
+        if (ok) {
             Serial.println("MQTT bağlandı!");
             mqtt.subscribe(T_CTRL_DOSE_A);
             mqtt.subscribe(T_CTRL_DOSE_B);
@@ -526,6 +537,12 @@ void setup() {
     Serial.printf("Saat (UTC+3): %02d:%02d\n", timeClient.getHours(), timeClient.getMinutes());
 
     // MQTT
+    if (MQTT_TLS) {
+        wifiSecureClient.setInsecure();
+        mqtt.setClient(wifiSecureClient);
+    } else {
+        mqtt.setClient(wifiClient);
+    }
     mqtt.setServer(MQTT_HOST, MQTT_PORT);
     mqtt.setCallback(onMqttMessage);
     mqtt.setKeepAlive(30);

@@ -71,6 +71,9 @@ object Constants {
     const val PREF_MQTT_PROVIDER = "mqtt_provider"
     const val PREF_MQTT_URL = "mqtt_url"
     const val PREF_MQTT_WS_URL = "mqtt_ws_url"
+    const val PREF_MQTT_USERNAME = "mqtt_username"
+    const val PREF_MQTT_PASSWORD = "mqtt_password"
+    const val PREF_MQTT_USE_TLS = "mqtt_use_tls"
     const val PREF_PUMP_TIMER = "pump_timer"
     const val PREF_LIGHT_TIMER = "light_timer"
 }

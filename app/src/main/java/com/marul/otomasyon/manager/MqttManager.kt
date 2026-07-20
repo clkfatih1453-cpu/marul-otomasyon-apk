@@ -33,10 +33,12 @@ class MqttManager {
 
     private val subscribeTopics = listOf(
         Constants.TOPIC_PH, Constants.TOPIC_EC, Constants.TOPIC_TEMP,
-        Constants.TOPIC_TANK, Constants.TOPIC_FLOW_A, Constants.TOPIC_FLOW_B,
-        Constants.TOPIC_FLOW_PH, Constants.TOPIC_STATUS_PH_DOWN,
-        Constants.TOPIC_STATUS_FERT_A, Constants.TOPIC_STATUS_FERT_B,
-        Constants.TOPIC_STATUS_CIRC
+        Constants.TOPIC_HUMIDITY, Constants.TOPIC_WATER_TEMP,
+        Constants.TOPIC_TANK, Constants.TOPIC_WATER_ADDED,
+        Constants.TOPIC_FLOW_A, Constants.TOPIC_FLOW_B, Constants.TOPIC_FLOW_PH,
+        Constants.TOPIC_FERT_A_ML, Constants.TOPIC_FERT_B_ML, Constants.TOPIC_ACID_ML,
+        Constants.TOPIC_STATUS_PH_DOWN, Constants.TOPIC_STATUS_FERT_A,
+        Constants.TOPIC_STATUS_FERT_B, Constants.TOPIC_STATUS_CIRC
     )
 
     fun connect(brokerHost: String, port: Int, callback: MqttCallback) {

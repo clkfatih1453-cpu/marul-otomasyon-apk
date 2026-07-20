@@ -1,4 +1,4 @@
-package com.marul.otomasyon.manager
+﻿package com.marul.otomasyon.manager
 
 import com.marul.otomasyon.model.PumpStatus
 import com.marul.otomasyon.model.SensorData
@@ -12,33 +12,19 @@ class SensorDataManager {
     private val _pumpStatus = MutableStateFlow(PumpStatus())
     val pumpStatus: StateFlow<PumpStatus> = _pumpStatus
 
-    fun updatePh(value: Float) {
-        _sensorData.value = _sensorData.value.copy(ph = value)
-    }
-
-    fun updateEc(value: Float) {
-        _sensorData.value = _sensorData.value.copy(ec = value)
-    }
-
-    fun updateTemperature(value: Float) {
-        _sensorData.value = _sensorData.value.copy(temperature = value)
-    }
-
-    fun updateTankLevel(value: Int) {
-        _sensorData.value = _sensorData.value.copy(tankLevel = value.coerceIn(0, 100))
-    }
-
-    fun updatePhFlowRate(value: Float) {
-        _sensorData.value = _sensorData.value.copy(phFlowRate = value)
-    }
-
-    fun updateFertilizerAFlowRate(value: Float) {
-        _sensorData.value = _sensorData.value.copy(fertilizerAFlowRate = value)
-    }
-
-    fun updateFertilizerBFlowRate(value: Float) {
-        _sensorData.value = _sensorData.value.copy(fertilizerBFlowRate = value)
-    }
+    fun updatePh(v: Float)              { _sensorData.value = _sensorData.value.copy(ph = v) }
+    fun updateEc(v: Float)              { _sensorData.value = _sensorData.value.copy(ec = v) }
+    fun updateTemperature(v: Float)     { _sensorData.value = _sensorData.value.copy(temperature = v) }
+    fun updateHumidity(v: Float)        { _sensorData.value = _sensorData.value.copy(humidity = v) }
+    fun updateWaterTemperature(v: Float){ _sensorData.value = _sensorData.value.copy(waterTemperature = v) }
+    fun updateTankLevel(v: Int)         { _sensorData.value = _sensorData.value.copy(tankLevel = v.coerceIn(0, 100)) }
+    fun updateWaterAdded(v: Float)      { _sensorData.value = _sensorData.value.copy(waterAddedLiters = v) }
+    fun updatePhFlowRate(v: Float)      { _sensorData.value = _sensorData.value.copy(phFlowRate = v) }
+    fun updateFertilizerAFlowRate(v: Float) { _sensorData.value = _sensorData.value.copy(fertilizerAFlowRate = v) }
+    fun updateFertilizerBFlowRate(v: Float) { _sensorData.value = _sensorData.value.copy(fertilizerBFlowRate = v) }
+    fun updateFertAMl(v: Float)         { _sensorData.value = _sensorData.value.copy(fertAMlTotal = v) }
+    fun updateFertBMl(v: Float)         { _sensorData.value = _sensorData.value.copy(fertBMlTotal = v) }
+    fun updateAcidMl(v: Float)          { _sensorData.value = _sensorData.value.copy(acidMlTotal = v) }
 
     fun setPumpStatus(
         phDown: Boolean = _pumpStatus.value.phDownRunning,
@@ -46,12 +32,7 @@ class SensorDataManager {
         fertilizerB: Boolean = _pumpStatus.value.fertilizerBRunning,
         circulation: Boolean = _pumpStatus.value.circulationRunning
     ) {
-        _pumpStatus.value = PumpStatus(
-            phDownRunning = phDown,
-            fertilizerARunning = fertilizerA,
-            fertilizerBRunning = fertilizerB,
-            circulationRunning = circulation
-        )
+        _pumpStatus.value = PumpStatus(phDown, fertilizerA, fertilizerB, circulation)
     }
 
     fun reset() {

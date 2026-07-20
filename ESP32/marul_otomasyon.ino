@@ -79,17 +79,23 @@
 #define T_SENSOR_FERT_B    "marul/sensor/fert_b_ml"
 #define T_SENSOR_ACID      "marul/sensor/acid_ml"
 
-#define T_STATUS_PUMP      "marul/status/pump"
+#define T_STATUS_CIRC      "marul/status/circ"       // Android: TOPIC_STATUS_CIRC
 #define T_STATUS_LIGHT     "marul/status/light"
 #define T_STATUS_FERT_A    "marul/status/fert_a"
 #define T_STATUS_FERT_B    "marul/status/fert_b"
 #define T_STATUS_ACID      "marul/status/ph_down"
 
+// Android → ESP32 kontrol komutları
 #define T_CTRL_DOSE_A      "marul/control/dose_a"
 #define T_CTRL_DOSE_B      "marul/control/dose_b"
 #define T_CTRL_DOSE_ACID   "marul/control/dose_acid"
 #define T_CTRL_PUMP_TMR    "marul/control/pump_timer"
 #define T_CTRL_LIGHT_TMR   "marul/control/light_timer"
+#define T_CTRL_CIRC        "marul/control/circ"       // Switch: devirdaim pompası
+#define T_CTRL_FERT_A      "marul/control/fert_a"     // Switch: gübre A
+#define T_CTRL_FERT_B      "marul/control/fert_b"     // Switch: gübre B
+#define T_CTRL_PH_DOWN     "marul/control/ph_down"    // Switch: asit pompası
+#define T_CTRL_RESET       "marul/control/reset"      // Sıfırla butonu
 
 // ============================================================
 //  Nesneler
@@ -251,12 +257,39 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
         float ml = msg.toFloat();
         if (ml > 0 && ml <= 200) doseML(PIN_PUMP_ACID, ml, acidMlTotal, T_STATUS_ACID);
     }
+    // ── Manuel Switch Kontrolleri (Android switch toggle) ──
+    else if (t == T_CTRL_CIRC) {
+        bool on = (msg == "1");
+        digitalWrite(PIN_PUMP_CIRC, on ? RELAY_ON : RELAY_OFF);
+        pumpRunning = on;
+        mqtt.publish(T_STATUS_CIRC, on ? "1" : "0");
+        Serial.printf("Manuel Devirdaim: %s\n", on ? "ACIK" : "KAPALI");
+    }
+    else if (t == T_CTRL_FERT_A) {
+        bool on = (msg == "1");
+        digitalWrite(PIN_PUMP_DOSE_A, on ? RELAY_ON : RELAY_OFF);
+        mqtt.publish(T_STATUS_FERT_A, on ? "1" : "0");
+        Serial.printf("Manuel Gubre A: %s\n", on ? "ACIK" : "KAPALI");
+    }
+    else if (t == T_CTRL_FERT_B) {
+        bool on = (msg == "1");
+        digitalWrite(PIN_PUMP_DOSE_B, on ? RELAY_ON : RELAY_OFF);
+        mqtt.publish(T_STATUS_FERT_B, on ? "1" : "0");
+        Serial.printf("Manuel Gubre B: %s\n", on ? "ACIK" : "KAPALI");
+    }
+    else if (t == T_CTRL_PH_DOWN) {
+        bool on = (msg == "1");
+        digitalWrite(PIN_PUMP_ACID, on ? RELAY_ON : RELAY_OFF);
+        mqtt.publish(T_STATUS_ACID, on ? "1" : "0");
+        Serial.printf("Manuel Asit: %s\n", on ? "ACIK" : "KAPALI");
+    }
+    // ── Zamanlama ──
     else if (t == T_CTRL_PUMP_TMR) {
         parseTimer(msg, pumpStartH, pumpStartM, pumpEndH, pumpEndM);
         prefs.begin("marul", false);
         prefs.putString("pump_tmr", msg);
         prefs.end();
-        Serial.printf("Pompa zamanlayıcı: %02d:%02d - %02d:%02d\n",
+        Serial.printf("Pompa zamanlayici: %02d:%02d - %02d:%02d\n",
                       pumpStartH, pumpStartM, pumpEndH, pumpEndM);
     }
     else if (t == T_CTRL_LIGHT_TMR) {
@@ -264,8 +297,17 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
         prefs.begin("marul", false);
         prefs.putString("light_tmr", msg);
         prefs.end();
-        Serial.printf("Işık zamanlayıcı: %02d:%02d - %02d:%02d\n",
+        Serial.printf("Isik zamanlayici: %02d:%02d - %02d:%02d\n",
                       lightStartH, lightStartM, lightEndH, lightEndM);
+    }
+    // ── Sistem Sıfırla ──
+    else if (t == T_CTRL_RESET) {
+        if (msg == "1") {
+            Serial.println("Uzaktan sifirlama komutu alindi!");
+            mqtt.publish("marul/status/online", "0");
+            delay(300);
+            ESP.restart();
+        }
     }
 }
 
@@ -273,22 +315,32 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
 //  MQTT Bağlantı
 // ============================================================
 void connectMQTT() {
-    while (!mqtt.connected()) {
-        Serial.print("MQTT bağlanıyor...");
+    int retries = 0;
+    while (!mqtt.connected() && retries < 10) {
+        Serial.printf("MQTT bağlanıyor... (deneme %d)\n", retries + 1);
         bool ok = mqtt.connect(MQTT_CLIENT);
-        // Şifre varsa: mqtt.connect(MQTT_CLIENT, MQTT_USER, MQTT_PASS);
         if (ok) {
-            Serial.println(" bağlandı!");
+            Serial.println("MQTT bağlandı!");
+            // Tüm kontrol topiclerini dinle
             mqtt.subscribe(T_CTRL_DOSE_A);
             mqtt.subscribe(T_CTRL_DOSE_B);
             mqtt.subscribe(T_CTRL_DOSE_ACID);
             mqtt.subscribe(T_CTRL_PUMP_TMR);
             mqtt.subscribe(T_CTRL_LIGHT_TMR);
+            mqtt.subscribe(T_CTRL_CIRC);
+            mqtt.subscribe(T_CTRL_FERT_A);
+            mqtt.subscribe(T_CTRL_FERT_B);
+            mqtt.subscribe(T_CTRL_PH_DOWN);
+            mqtt.subscribe(T_CTRL_RESET);
             mqtt.publish("marul/status/online", "1");
-        } else {
-            Serial.printf(" başarısız (rc=%d), 3s bekle\n", mqtt.state());
-            delay(3000);
+            return;
         }
+        Serial.printf("Başarısız (rc=%d), 3s bekle\n", mqtt.state());
+        delay(3000);
+        retries++;
+    }
+    if (!mqtt.connected()) {
+        Serial.println("MQTT bağlanamadı! Sensör yayını olmadan devam ediliyor.");
     }
 }
 
@@ -364,7 +416,7 @@ void checkTimers() {
     if (pumpShouldRun != pumpRunning) {
         pumpRunning = pumpShouldRun;
         digitalWrite(PIN_PUMP_CIRC, pumpRunning ? RELAY_ON : RELAY_OFF);
-        mqtt.publish(T_STATUS_PUMP, pumpRunning ? "1" : "0");
+        mqtt.publish(T_STATUS_CIRC, pumpRunning ? "1" : "0");
         Serial.printf("Pompa: %s\n", pumpRunning ? "AÇIK" : "KAPALI");
     }
 
